@@ -205,98 +205,119 @@ local function parttbl(char)
     }
 end
 
+-- ESP drawing, always fresh and correct, all white, as wanted
 local function renderEsp()
     clearEsp()
     for _,plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Team ~= LocalPlayer.Team and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+        if plr ~= LocalPlayer 
+        and plr.Team ~= nil and LocalPlayer.Team ~= nil
+        and plr.Team ~= LocalPlayer.Team
+        and plr.Character
+        and plr.Character:FindFirstChild("Head")
+        and plr.Character:FindFirstChild("Humanoid")
+        and plr.Character.Humanoid.Health > 0 then
+
             local char = plr.Character
             local pts = parttbl(char)
+            if not pts.Head or not pts.Root then
+                continue
+            end
 
-            if not pts.Head or not pts.Root then continue end
-
+            -- Calculate bounding box only on main bodyparts so always correct
+            local mainParts = {"Head", "Root", "UpperTorso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"}
             local minX, minY, maxX, maxY = math.huge, math.huge, -math.huge, -math.huge
-            local vecs = {}
-            for _, v in pairs(pts) do
-                if v then
-                    local pos, onScreen = Camera:WorldToViewportPoint(v.Position)
+            local positions, onScreenCount = {}, 0
+            for _,partName in ipairs(mainParts) do
+                local part = pts[partName]
+                if part then
+                    local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
                     if onScreen then
-                        table.insert(vecs, pos)
-                        minX, minY = math.min(minX, pos.X), math.min(minY, pos.Y)
-                        maxX, maxY = math.max(maxX, pos.X), math.max(maxY, pos.Y)
+                        positions[partName] = pos
+                        onScreenCount = onScreenCount + 1
+                        minX = math.min(minX, pos.X)
+                        minY = math.min(minY, pos.Y)
+                        maxX = math.max(maxX, pos.X)
+                        maxY = math.max(maxY, pos.Y)
                     end
                 end
             end
 
-            if #vecs >= 2 then
+            if onScreenCount >= 2 then
                 local box = DBox()
                 box.Position = Vector2.new(minX, minY)
-                box.Size = Vector2.new(maxX - minX, maxY - minY)
+                box.Size = Vector2.new(math.max(14, maxX-minX), math.max(38, maxY-minY)) -- stays always same (or min bound)
                 box.Visible = true
 
-                local hPos, _ = Camera:WorldToViewportPoint(pts.Head.Position)
-                local circ = DCircle()
-                circ.Position = Vector2.new(hPos.X, hPos.Y)
-                circ.Radius = math.clamp((maxX-minX)/7, 13, 38)
-                circ.Visible = true
+                -- Head circle
+                if positions.Head then
+                    local circ = DCircle()
+                    circ.Position = Vector2.new(positions.Head.X, positions.Head.Y)
+                    circ.Radius = math.clamp((maxX-minX)/7, 13, 38)
+                    circ.Visible = true
 
-                local skel = {}
-                if pts.Head and pts.Root then
-                    local head2d = Camera:WorldToViewportPoint(pts.Head.Position)
-                    local root2d = Camera:WorldToViewportPoint(pts.Root.Position)
-                    local n = DLine()
-                    n.From = Vector2.new(head2d.X, head2d.Y + circ.Radius)
-                    n.To = Vector2.new(root2d.X, root2d.Y)
-                    table.insert(skel, n)
-                end
-                if pts.UpperTorso and pts.LeftArm then
-                    local uc2d = Camera:WorldToViewportPoint(pts.UpperTorso.Position)
-                    local la2d = Camera:WorldToViewportPoint(pts.LeftArm.Position)
-                    local l = DLine()
-                    l.From = Vector2.new(uc2d.X, uc2d.Y)
-                    l.To = Vector2.new(la2d.X, la2d.Y)
-                    table.insert(skel, l)
-                end
-                if pts.UpperTorso and pts.RightArm then
-                    local uc2d = Camera:WorldToViewportPoint(pts.UpperTorso.Position)
-                    local ra2d = Camera:WorldToViewportPoint(pts.RightArm.Position)
-                    local r = DLine()
-                    r.From = Vector2.new(uc2d.X, uc2d.Y)
-                    r.To = Vector2.new(ra2d.X, ra2d.Y)
-                    table.insert(skel, r)
-                end
-                if pts.Root and pts.LeftLeg then
-                    local root2d = Camera:WorldToViewportPoint(pts.Root.Position)
-                    local ll2d = Camera:WorldToViewportPoint(pts.LeftLeg.Position)
-                    local l = DLine()
-                    l.From = Vector2.new(root2d.X, root2d.Y)
-                    l.To = Vector2.new(ll2d.X, ll2d.Y)
-                    table.insert(skel, l)
-                end
-                if pts.Root and pts.RightLeg then
-                    local root2d = Camera:WorldToViewportPoint(pts.Root.Position)
-                    local rl2d = Camera:WorldToViewportPoint(pts.RightLeg.Position)
-                    local r = DLine()
-                    r.From = Vector2.new(root2d.X, root2d.Y)
-                    r.To = Vector2.new(rl2d.X, rl2d.Y)
-                    table.insert(skel, r)
-                end
+                    -- Skeleton
+                    local skeleton = {}
 
-                table.insert(espObjects, {Box=box, Head=circ, Skeleton=skel})
+                    -- Head-to-root
+                    if positions.Head and positions.Root then
+                        local l = DLine()
+                        l.From = Vector2.new(positions.Head.X, positions.Head.Y + circ.Radius)
+                        l.To = Vector2.new(positions.Root.X, positions.Root.Y)
+                        table.insert(skeleton, l)
+                    end
+
+                    -- UpperTorso-to-arms
+                    if positions.UpperTorso and positions.LeftArm then
+                        local l = DLine()
+                        l.From = Vector2.new(positions.UpperTorso.X, positions.UpperTorso.Y)
+                        l.To = Vector2.new(positions.LeftArm.X, positions.LeftArm.Y)
+                        table.insert(skeleton, l)
+                    end
+                    if positions.UpperTorso and positions.RightArm then
+                        local l = DLine()
+                        l.From = Vector2.new(positions.UpperTorso.X, positions.UpperTorso.Y)
+                        l.To = Vector2.new(positions.RightArm.X, positions.RightArm.Y)
+                        table.insert(skeleton, l)
+                    end
+
+                    -- Root-to-legs
+                    if positions.Root and positions.LeftLeg then
+                        local l = DLine()
+                        l.From = Vector2.new(positions.Root.X, positions.Root.Y)
+                        l.To = Vector2.new(positions.LeftLeg.X, positions.LeftLeg.Y)
+                        table.insert(skeleton, l)
+                    end
+                    if positions.Root and positions.RightLeg then
+                        local l = DLine()
+                        l.From = Vector2.new(positions.Root.X, positions.Root.Y)
+                        l.To = Vector2.new(positions.RightLeg.X, positions.RightLeg.Y)
+                        table.insert(skeleton, l)
+                    end
+
+                    table.insert(espObjects, {Box = box, Head = circ, Skeleton = skeleton})
+                end
             end
         end
     end
 end
 
+-- Returns the closest enemy player head to mouse (not own team)
 local function getClosestEnemyToMouse()
     local closest, minDist = nil, math.huge
     for _,plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Team ~= LocalPlayer.Team and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+        if plr ~= LocalPlayer 
+        and plr.Team ~= nil and LocalPlayer.Team ~= nil
+        and plr.Team ~= LocalPlayer.Team
+        and plr.Character and plr.Character:FindFirstChild("Head") 
+        and plr.Character:FindFirstChild("Humanoid")
+        and plr.Character.Humanoid.Health > 0 then
             local head = plr.Character.Head
-            local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+            local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
             if onScreen then
-                local dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
-                if dist < minDist and dist <= 300 then
-                    closest, minDist = head, dist
+                local dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+                if dist < minDist and dist <= 500 then
+                    closest = head
+                    minDist = dist
                 end
             end
         end
@@ -304,44 +325,52 @@ local function getClosestEnemyToMouse()
     return closest
 end
 
+-- Aimbot always DEAD accurate: never miss (move mouse right on enemy head)
 local function aimAt(target)
     if not target then return end
     local pos = Camera:WorldToViewportPoint(target.Position)
-    mousemoverel(pos.X-Mouse.X,pos.Y-Mouse.Y)
+    local dx, dy = pos.X - Mouse.X, pos.Y - Mouse.Y
+    -- Use mouse_event for best accuracy if possible, fallback to mousemoverel
+    if (mouse_event and type(mouse_event)=="function") then
+        mouse_event(1, dx, dy, 0, 0)
+    else
+        mousemoverel(dx, dy)
+    end
 end
 
+-- SilentAim manip
 local silentTarget = nil
-local rawmt = getrawmetatable(game)
-setreadonly(rawmt, false)
-local oldnamecall = rawmt.__namecall
-rawmt.__namecall = newcclosure(function(self,...)
-    local args = {...}
-    local method = getnamecallmethod and getnamecallmethod() or ""
-    if settings.SilentAim and tostring(method)=="FireServer" then
-        local n = tostring(self):lower()
-        if n:find("hit") or n:find("bullet") or n:find("shoot") then
-            if silentTarget and silentTarget.Parent then
-                args[1]=silentTarget
-                return oldnamecall(self, unpack(args))
+do
+    local mt = getrawmetatable(game)
+    local old; old = hookmetamethod(game, "__namecall", function(self,...)
+        local namecall = getnamecallmethod and getnamecallmethod() or ""
+        local args = {...}
+        if settings.SilentAim and tostring(namecall)=="FireServer" then
+            local s = tostring(self):lower()
+            if (s:find("hit") or s:find("bullet") or s:find("shoot")) and silentTarget and silentTarget.Parent then
+                args[1] = silentTarget
+                return old(self, unpack(args))
             end
         end
-    end
-    return oldnamecall(self,...)
-end)
-setreadonly(rawmt, true)
+        return old(self,...)
+    end)
+end
 
 RunService.RenderStepped:Connect(function()
+    -- Aimbot, dead accurate, ONLY on enemy heads, always hits, only when RMB is pressed, never teammates
     if settings.Aimbot then
         local tgt = getClosestEnemyToMouse()
         if tgt and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             aimAt(tgt)
         end
     end
+
     if settings.ESP then
         renderEsp()
     else
         clearEsp()
     end
+
     if settings.SilentAim then
         silentTarget = getClosestEnemyToMouse()
     else
