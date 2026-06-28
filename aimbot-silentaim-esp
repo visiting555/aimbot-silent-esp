@@ -1,11 +1,11 @@
 -- Roblox Lua ESP + Aimbot + Silent Aim Hack Script with Menu
+-- Menü açılma problemi düzeltildi!
 
 --[[
-    Bu script, bir GUI menü ve işlevsel olarak ESP, Aimbot ve Silent Aim içerir.
+    Bu script bir GUI menü ve işlevsel olarak ESP, Aimbot ve Silent Aim içerir.
     Menü üzerinden hileler açılıp kapatılır.
-    Gelişmiş exploiter ortamlarında (SynapseX, Fluxus, KRNL, Electron vs.) sorunsuz çalışır.
-    Mobil Roblox'ta ve vanilla clientta çalışmaz.
-    Güvenliğiniz için scripti dikkatli kullanın.
+    Yalnızca exploiterlarda çalışır (SynapseX, Fluxus vs.).
+    Güvenliğiniz için bu scripti dikkatli kullanın.
 ]]
 
 -- // Ayarlar
@@ -20,14 +20,14 @@ local settings = {
     SilentAimHitChance = 85,
 }
 
--- // Oyuncu ve Hizmetler
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
+local UserInputService = game:GetService("UserInputService")
 
--- // Lib: Simple ESP Drawer (ad-hoc)
+-- // ESP Çizimleri
 local ESP_Boxes = {}
 
 function CreateESPBox(character, color)
@@ -107,7 +107,7 @@ function Aimbot()
     end
 end
 
--- // SilentAim Fonksiyonu (Meta-table hook)
+-- // SilentAim Fonksiyonu
 local SilentAimTarget = nil
 
 function SelectSilentAimTarget()
@@ -119,8 +119,11 @@ function SelectSilentAimTarget()
 end
 
 -- // Raycast manipulation
-local __namecall
-__namecall = hookmetamethod(game, "__namecall", function(self, ...)
+local mt = getrawmetatable(game)
+local __namecall = mt.__namecall
+setreadonly(mt, false)
+
+mt.__namecall = newcclosure(function(self, ...)
     if not checkcaller() and settings.SilentAim and LocalPlayer.Character then
         local method = getnamecallmethod()
         if tostring(method) == "FindPartOnRayWithIgnoreList" or tostring(method) == "Raycast" then
@@ -142,21 +145,36 @@ __namecall = hookmetamethod(game, "__namecall", function(self, ...)
     end
     return __namecall(self, ...)
 end)
+setreadonly(mt, true)
 
--- // Basit Menu
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+-- // Menü Oluşturma
+local CoreGuiSafe = (pcall(function() return game:GetService("CoreGui") end) and game:GetService("CoreGui")) or LocalPlayer:WaitForChild("PlayerGui")
+local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ESP_Aimbot_Menu"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Enabled = true
+ScreenGui.Parent = CoreGuiSafe -- Menü ilk başta açıldı!
 
-local Frame = Instance.new("Frame", ScreenGui)
+local Frame = Instance.new("Frame")
 Frame.Position = UDim2.new(0, 100, 0, 100)
 Frame.Size = UDim2.new(0, 240, 0, 260)
 Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Frame.BorderSizePixel = 0
 Frame.Active = true
 Frame.Draggable = true
+Frame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner", Frame)
 UICorner.CornerRadius = UDim.new(0,10)
+
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0, 32)
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "ESP/Aimbot/SilentAim Menu"
+Title.Font = Enum.Font.SourceSansBold
+Title.TextColor3 = Color3.fromRGB(50,200,50)
+Title.TextSize = 19
 
 local function CreateToggle(labelText, y, settingKey)
     local t = Instance.new("TextButton", Frame)
@@ -227,37 +245,35 @@ local function CreateSlider(labelText, y, settingKey, min, max, increment)
     end)
 end
 
-CreateToggle("ESP", 15, "ESP")
-CreateToggle("Aimbot", 60, "Aimbot")
-CreateToggle("SilentAim", 105, "SilentAim")
-CreateSlider("Aimbot FOV",150,"AimbotFOV",20,200,5)
-CreateSlider("Aimbot Smooth",190,"AimbotSmooth",0,1,0.05)
-CreateSlider("SilentAim HitChance",230,"SilentAimHitChance",0,100,1)
+CreateToggle("ESP", 40, "ESP")
+CreateToggle("Aimbot", 85, "Aimbot")
+CreateToggle("SilentAim", 130, "SilentAim")
+CreateSlider("Aimbot FOV",175,"AimbotFOV",20,200,5)
+CreateSlider("Aimbot Smooth",215,"AimbotSmooth",0,1,0.05)
+CreateSlider("SilentAim HitChance",255,"SilentAimHitChance",0,100,1)
 
 -- // Ana Döngü
 RunService.RenderStepped:Connect(function()
     pcall(function()
-    if settings.ESP then
-        UpdateESP()
-    else
-        for plyr,box in pairs(ESP_Boxes) do
-            box.Visible = false
+        if settings.ESP then
+            UpdateESP()
+        else
+            for plyr,box in pairs(ESP_Boxes) do
+                box.Visible = false
+            end
         end
-    end
 
-    if settings.Aimbot and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        Aimbot()
-    end
+        if settings.Aimbot and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+            Aimbot()
+        end
     end)
 end)
 
 -- // GUI Toggle Shortcut (F4)
-local UIS = game:GetService("UserInputService")
-UIS.InputBegan:Connect(function(k, gpd)
+UserInputService.InputBegan:Connect(function(k, gpd)
     if not gpd and k.KeyCode == Enum.KeyCode.F4 then
         ScreenGui.Enabled = not ScreenGui.Enabled
     end
 end)
 
--- END OF SCRIPT
--- Güvenli kullanım ve kendi riskinizde çalıştırın!
+-- Script Sonu / Her şey menüde açılıyor ve ilk başta menü direkt açılıyor!
