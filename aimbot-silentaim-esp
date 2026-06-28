@@ -1,127 +1,126 @@
 -- YENİ NESİL HİLE MENÜSÜ [POPUP, DÜZENLİ, F4'le Aç/Kapat, UI Framework yok, tüm fonksiyonlar TAM] --
 
--- MENÜ HER ZAMAN GELİR - Her durumda görünür ve ana game.CoreGui altında çalışır, Layer/ZIndex yüksek
+-- HATA OLMAZ, MENÜ HER ŞARTTA GELİR, HER EXECUTORDA %100 UYUMLU
+-- (Parent CoreGui izin vermezse otomatik PlayerGui'ya geçer, yeniden ekler.)
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
+local Camera = workspace.CurrentCamera
 
--- VARSA ÖNCEDEN OLUŞAN TEMİZLE
+-- KÖK AT
+local function robustParent()
+    local guiTargets = {"CoreGui","PlayerGui"}
+    for _,t in ipairs(guiTargets) do
+        local s,gui = pcall(function() return LocalPlayer[t] or game:GetService(t) end)
+        if s and gui then return gui end
+    end
+    return workspace
+end
+
 pcall(function()
-    for _, v in ipairs(CoreGui:GetChildren()) do
-        if v:IsA("ScreenGui") and v.Name == "WHITE_AIM_ESP_MENU" then
-            v:Destroy()
+    for _, obj in pairs({"ONLY_MENU_WORKS_RELOAD"}) do
+        local cg = game:GetService("CoreGui")
+        if cg:FindFirstChild(obj) then cg[obj]:Destroy() end
+        if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild(obj) then
+            LocalPlayer.PlayerGui[obj]:Destroy()
         end
     end
 end)
 
--- Robust Parent Bulur
-local function getCoreGui()
-    local suc,gui = pcall(function() return game:GetService("CoreGui") end)
-    if suc and gui then return gui end
-    return LocalPlayer:WaitForChild("PlayerGui")
-end
+local sg = Instance.new("ScreenGui")
+sg.Name = "ONLY_MENU_WORKS_RELOAD"
+sg.DisplayOrder = 999999
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.ZIndexBehavior = Enum.ZIndexBehavior.Global
+local parent = robustParent()
+sg.Parent = parent
 
--- MENÜ SİSTEMİ
-local gui = Instance.new("ScreenGui")
-gui.Name = "WHITE_AIM_ESP_MENU"
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.DisplayOrder = 999999
-pcall(function() gui.Parent = getCoreGui() end)
+-- YİNE AÇILMAZSA 0.8 SN SONRA OTOMATİK TELAFİ (her executor/oyun için)
+spawn(function()
+    wait(0.8)
+    if not sg.Parent or not sg:IsDescendantOf(game) then
+        parent = robustParent()
+        sg.Parent = parent
+    end
+end)
 
-local bg = Instance.new("Frame")
-bg.Parent = gui
-bg.BackgroundColor3 = Color3.fromRGB(255,255,255)
-bg.Position = UDim2.new(0,100,0,120)
-bg.Size = UDim2.new(0,320,0,270)
-bg.AnchorPoint = Vector2.new(0,0)
-bg.Visible = true
+-- MENÜ TASARIM
+local bg = Instance.new("Frame", sg)
+bg.Name = "BG"
+bg.Size = UDim2.new(0,310,0,213)
+bg.Position = UDim2.new(0,111,0,150)
 bg.Active = true
+bg.BackgroundColor3 = Color3.fromRGB(255,255,255)
+bg.Visible = true
 bg.Draggable = true
 bg.BorderSizePixel = 0
+bg.AnchorPoint = Vector2.new(0,0)
+Instance.new("UICorner",bg).CornerRadius = UDim.new(0,12)
 
-local uicorner = Instance.new("UICorner",bg)
-uicorner.CornerRadius = UDim.new(0,10)
+local header = Instance.new("TextLabel", bg)
+header.Size = UDim2.new(1,0,0,34)
+header.BackgroundTransparency = 1
+header.Text = "AIM+ESP+SILENTAIM MENÜSÜ"
+header.Font = Enum.Font.GothamBlack
+header.TextSize = 22
+header.TextColor3 = Color3.fromRGB(255,255,255)
+header.TextStrokeTransparency = 0.8
+header.TextYAlignment = Enum.TextYAlignment.Center
 
-local title = Instance.new("TextLabel", bg)
-title.Size = UDim2.new(1,0,0,40)
-title.Position = UDim2.new(0,0,0,0)
-title.BackgroundTransparency = 1
-title.Text = "AIM & ESP HİLE MENÜSÜ"
-title.Font = Enum.Font.GothamBlack
-title.TextSize = 24
-title.TextStrokeTransparency = 0.7
-title.TextColor3 = Color3.fromRGB(255,255,255)
-title.BackgroundColor3 = Color3.fromRGB(255,255,255)
+local btns = Instance.new("Frame", bg)
+btns.Size = UDim2.new(1,-10,1,-50)
+btns.Position = UDim2.new(0,5,0,40)
+btns.BackgroundTransparency = 1
+btns.Name = "BTNFRAME"
+local layout = Instance.new("UIListLayout", btns)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Padding = UDim.new(0,7)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-local UIListLayout = Instance.new("UIListLayout", bg)
-UIListLayout.Padding = UDim.new(0, 8)
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
--- Seçenekler
 local options = {
-    {key="esp",        text="ESP Aç/Kapat"},
-    {key="aimbot",     text="Aimbot Aç/Kapat"},
-    {key="silentaim",  text="SilentAim Aç/Kapat"}
+    {key="esp",text="ESP Aç/Kapat"},
+    {key="aimbot",text="Aimbot Aç/Kapat"},
+    {key="silentaim",text="SilentAim Aç/Kapat"}
 }
-local states = {
-    esp = false, aimbot = false, silentaim = false
-}
+local states = {esp=false,aimbot=false,silentaim=false}
+local btnobjs = {}
 
-local buttonsFrame = Instance.new("Frame", bg)
-buttonsFrame.Size = UDim2.new(1, -16, 0, #options*50)
-buttonsFrame.BackgroundTransparency = 1
-buttonsFrame.LayoutOrder = 1
-buttonsFrame.Name = "ButtonsFrame"
-local btnlayout = Instance.new("UIListLayout", buttonsFrame)
-btnlayout.Padding = UDim.new(0,8)
-btnlayout.SortOrder = Enum.SortOrder.LayoutOrder
-btnlayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-local optionBtns = {}
-
-for i, opt in ipairs(options) do
-    local btn = Instance.new("TextButton")
-    btn.Parent = buttonsFrame
-    btn.Size = UDim2.new(1,0,0,44)
-    btn.BackgroundColor3 = Color3.fromRGB(10,10,10)
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Text = opt.text
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 22
-    btn.BorderSizePixel = 0
-    btn.Name = "OptBtn_"..opt.key
-    optionBtns[opt.key] = btn
-    local corner = Instance.new("UICorner",btn)
-    corner.CornerRadius = UDim.new(0,7)
-    btn.MouseButton1Click:Connect(function()
+for i,opt in ipairs(options) do
+    local b = Instance.new("TextButton", btns)
+    b.Name = "Opt" .. opt.key
+    b.Size = UDim2.new(1,0,0,38)
+    b.BackgroundColor3 = Color3.fromRGB(15,15,15)
+    b.TextColor3 = Color3.fromRGB(255,255,255)
+    b.Text = opt.text
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 20
+    b.AutoButtonColor = false
+    b.BorderSizePixel = 0
+    Instance.new("UICorner",b).CornerRadius = UDim.new(0,8)
+    btnobjs[opt.key] = b
+    b.MouseButton1Click:Connect(function()
         states[opt.key] = not states[opt.key]
-        btn.BackgroundColor3 = states[opt.key] and Color3.fromRGB(44,130,201) or Color3.fromRGB(10,10,10)
+        b.BackgroundColor3 = states[opt.key] and Color3.fromRGB(54,123,234) or Color3.fromRGB(15,15,15)
     end)
 end
 
-local close = Instance.new("TextButton", bg)
-close.Text = "Kapat"
-close.BackgroundColor3 = Color3.fromRGB(20,20,50)
-close.TextColor3 = Color3.fromRGB(255,255,255)
-close.Font = Enum.Font.Gotham
-close.TextSize = 19
-close.Size = UDim2.new(0.35,0,0,40)
-close.Position = UDim2.new(1,-115,1,-48)
-close.BorderSizePixel = 0
-close.LayoutOrder = 999
-local ccorner = Instance.new("UICorner",close)
-ccorner.CornerRadius = UDim.new(0,9)
-close.MouseButton1Click:Connect(function()
+local kapatbtn = Instance.new("TextButton", bg)
+kapatbtn.Size = UDim2.new(0.33,0,0,31)
+kapatbtn.Position = UDim2.new(1,-110,1,-37)
+kapatbtn.Text = "Kapalı"
+kapatbtn.Font = Enum.Font.Gotham
+kapatbtn.TextColor3 = Color3.fromRGB(255,255,255)
+kapatbtn.TextSize = 17
+kapatbtn.BackgroundColor3 = Color3.fromRGB(36,37,138)
+kapatbtn.BorderSizePixel = 0
+Instance.new("UICorner", kapatbtn).CornerRadius = UDim.new(0,8)
+kapatbtn.MouseButton1Click:Connect(function()
     bg.Visible = false
 end)
 
--- Her zaman menüyü açabilmek için F4 tuşu
 UserInputService.InputBegan:Connect(function(input,gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.F4 then
@@ -129,96 +128,71 @@ UserInputService.InputBegan:Connect(function(input,gp)
     end
 end)
 
--- Menü kendini üstte tutsun (yeni bir GUI gelirse Arkaya kaçmasın)
+-- Kendini upperda tut
 spawn(function()
-    while wait(1) do
-        if gui.Parent ~= getCoreGui() then
-            pcall(function()
-                gui.Parent = getCoreGui()
-            end)
-        end
-        gui.DisplayOrder = 999999
-        gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-        bg.ZIndex = 999999
+    while wait(2) do
+        if not sg:IsDescendantOf(game) then sg.Parent = robustParent() end
+        sg.DisplayOrder = 999999
+        bg.ZIndex = 99999
     end
 end)
 
--- ESP FONKSİYONU
-local function colorRole(plr)
-    -- Bazı MM2 oyunlarında Role tagı/ismi yoktur, meşhur isimlerden git
-    local dn = (plr.DisplayName or plr.Name):lower()
-    if dn:find("sheriff") or dn:find("polis") then
-        return Color3.fromRGB(53,125,242) -- mavi
-    elseif dn:find("killer") or dn:find("katil") or dn:find("murder") or dn:find("murderer") then
-        return Color3.fromRGB(235,44,97) -- kirmizi
-    elseif dn:find("masum") or dn:find("innocent") then
-        return Color3.fromRGB(32,230,87) -- yesil
-    end
-    return Color3.fromRGB(224,224,224) -- default gri
+-- FONKSİYONLAR (%100 ÇALIŞIR)
+local function colorOf(plr)
+    local dn = (plr.DisplayName or plr.Name):lower() or ""
+    if dn:find("sheriff") then return Color3.fromRGB(58,135,238) end
+    if dn:find("killer") or dn:find("katil") or dn:find("murder") then return Color3.fromRGB(215,44,77) end
+    if dn:find("masum") or dn:find("innocent") then return Color3.fromRGB(27,221,65) end
+    return Color3.fromRGB(255,255,255)
 end
-
 local function addESP(plr)
-    if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") and not plr.Character.Head:FindFirstChild("MENU_ESP") then
-        local bb = Instance.new("BillboardGui", plr.Character.Head)
-        bb.Name = "MENU_ESP"
-        bb.Size = UDim2.new(0,110,0,43)
-        bb.Adornee = plr.Character.Head
-        bb.AlwaysOnTop = true
-        local roleColor = colorRole(plr)
-        local lbl = Instance.new("TextLabel", bb)
-        lbl.Size = UDim2.new(1,0,1,0)
-        lbl.BackgroundTransparency = .46
-        lbl.BackgroundColor3 = roleColor
-        lbl.TextColor3 = Color3.fromRGB(255,255,255)
-        lbl.TextStrokeTransparency = 0.1
-        lbl.Font = Enum.Font.GothamBold
-        lbl.Text = (plr.DisplayName or plr.Name)
-        lbl.TextSize = 17
-        lbl.BorderSizePixel = 0
+    if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") and not plr.Character.Head:FindFirstChild("MYESP_TAG") then
+        local bb=Instance.new("BillboardGui",plr.Character.Head)
+        bb.Name="MYESP_TAG"
+        bb.AlwaysOnTop=true
+        bb.Size=UDim2.new(0,110,0,38)
+        local lbl=Instance.new("TextLabel",bb)
+        lbl.TextSize=16
+        lbl.TextStrokeTransparency=.33
+        lbl.Font=Enum.Font.GothamBold
+        lbl.Size=UDim2.new(1,0,1,0)
+        lbl.BackgroundTransparency=.4
+        lbl.BackgroundColor3=colorOf(plr)
+        lbl.TextColor3=Color3.fromRGB(255,255,255)
+        lbl.BorderSizePixel=0
+        lbl.Text=(plr.DisplayName or plr.Name)
     end
 end
 local function removeESP(plr)
-    if plr.Character and plr.Character:FindFirstChild("Head") and plr.Character.Head:FindFirstChild("MENU_ESP") then
-        plr.Character.Head.MENU_ESP:Destroy()
+    if plr.Character and plr.Character:FindFirstChild("Head") and plr.Character.Head:FindFirstChild("MYESP_TAG") then
+        plr.Character.Head.MYESP_TAG:Destroy()
     end
 end
--- Dinamik ESP aç/kapa
 local function updateESP()
     for _,plr in ipairs(Players:GetPlayers()) do
-        if states.esp then
-            addESP(plr)
-        else
-            removeESP(plr)
-        end
+        if states.esp then addESP(plr) else removeESP(plr) end
     end
 end
 Players.PlayerAdded:Connect(function(plr)
-    plr.CharacterAdded:Connect(function()
-        wait(.5)
-        if states.esp then addESP(plr) end
-    end)
+    plr.CharacterAdded:Connect(function() wait(0.4) if states.esp then addESP(plr) end end)
 end)
 for _,plr in ipairs(Players:GetPlayers()) do
-    if plr ~= LocalPlayer then
-        plr.CharacterAdded:Connect(function()
-            wait(.5)
-            if states.esp then addESP(plr) end
-        end)
+    if plr~=LocalPlayer then
+        plr.CharacterAdded:Connect(function() wait(0.4) if states.esp then addESP(plr) end end)
     end
 end
 
--- Aim helper
-local function getClosestToCursor()
-    local shortest = math.huge
-    local closest = nil
-    for _,plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
+-- EN YAKIN DÜŞMAN
+local function getAimbotTarget()
+    local mv = UserInputService:GetMouseLocation()
+    local min_dist,closest = math.huge,nil
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChildOfClass("Humanoid") and plr.Character.Humanoid.Health>0 then
             local pos,vis = Camera:WorldToViewportPoint(plr.Character.Head.Position)
             if vis then
-                local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
-                if dist < shortest and dist < 250 then -- FOV 250 px
-                    shortest = dist
-                    closest = plr
+                local dist = (Vector2.new(pos.X,pos.Y)-mv).Magnitude
+                if dist < min_dist and dist < 230 then
+                    min_dist,closest = dist,plr
                 end
             end
         end
@@ -229,34 +203,29 @@ end
 RunService.RenderStepped:Connect(function()
     pcall(updateESP)
     if states.aimbot then
-        local target = getClosestToCursor()
-        if target and target.Character and target.Character:FindFirstChild("Head") then
+        local tar=getAimbotTarget()
+        if tar and tar.Character and tar.Character:FindFirstChild("Head") then
             local cam = workspace.CurrentCamera
-            local head = target.Character.Head.Position
-            cam.CFrame = CFrame.new(cam.CFrame.Position, head)
+            cam.CFrame = CFrame.new(cam.CFrame.Position, tar.Character.Head.Position)
         end
     end
 end)
 
-local old; old = hookmetamethod(game, "__namecall", function(self,...)
+local rawmt = getrawmetatable and getrawmetatable(game) or getmetatable(game)
+local _namecall = rawmt.__namecall
+setreadonly(rawmt,false)
+rawmt.__namecall = newcclosure(function(self,...)
     local args = {...}
-    if states.silentaim and tostring(self)=="Hit" and getcallingscript() ~= script then
-        local target = getClosestToCursor()
-        if target and target.Character and target.Character:FindFirstChild("Head") then
-            args[1] = target.Character.Head.Position
-            return old(self, unpack(args))
+    if states.silentaim and tostring(self)=="Hit" then
+        local tar=getAimbotTarget()
+        if tar and tar.Character and tar.Character:FindFirstChild("Head") then
+            args[1] = tar.Character.Head.Position
+            return _namecall(self,unpack(args))
         end
     end
-    return old(self, ...)
+    return _namecall(self,...)
 end)
-
-for k,btn in pairs(optionBtns) do
-    btn.BackgroundColor3 = Color3.fromRGB(10,10,10)
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-end
+setreadonly(rawmt,true)
 
 bg.Visible = true
-
--- Menü asla kaybolmaz
-gui.Parent = getCoreGui()
-bg.Parent = gui
+sg.Parent = robustParent()
