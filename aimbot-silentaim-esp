@@ -1,201 +1,275 @@
--- ROBLOX HİLESİ - AİMBOT, ESP, SİLENTAİM, MENÜLÜ
-
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
-
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+local LP = Players.LocalPlayer
 
 local cheats = {
-    Aimbot = false,
-    ESP = false,
-    SilentAim = false
+    ["Aimbot"] = false,
+    ["ESP"] = false,
+    ["SilentAim"] = false
 }
 
-local menu = {
-    Visible = false,
-    X = 450,
-    Y = 200,
-    Width = 270,
-    Height = 220
-}
+local menuOpen = false
+local menuPos = Vector2.new(300, 180)
+local menuSize = Vector2.new(300, 235)
+local dragging = false
+local dragOffset = Vector2.new()
 
-local aimTarget = nil
-local ESP_Instances = {}
-
-function isEnemy(player)
-    if player == LocalPlayer then return false end
-    if player.Team ~= nil and LocalPlayer.Team ~= nil then
-        return player.Team ~= LocalPlayer.Team
+local function isEnemy(plr)
+    if plr == LP then return false end
+    if plr.Team and LP.Team then
+        return plr.Team ~= LP.Team
     end
     return true
 end
 
-function getClosestEnemyToCursor()
-    local shortest = math.huge
-    local target = nil
-    for _, player in ipairs(Players:GetPlayers()) do
-        if isEnemy(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local pos, onscreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-            if onscreen then
-                local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).magnitude
-                if dist < shortest then
-                    shortest = dist
-                    target = player
+local function getClosestEnemy()
+    local closestPlayer = nil
+    local minDist = math.huge
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if isEnemy(plr) and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, vis = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+            if vis then
+                local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(UIS:GetMouseLocation().X, UIS:GetMouseLocation().Y)).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    closestPlayer = plr
                 end
             end
         end
     end
-    return target
+    return closestPlayer
 end
 
-function doAimbot()
-    if not cheats.Aimbot then return end
-    local target = getClosestEnemyToCursor()
-    if not target then return end
-    if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-        local root = target.Character.HumanoidRootPart
-        local camPos = Camera.CFrame.Position
-        local direction = (root.Position - camPos).Unit
-        Camera.CFrame = CFrame.new(camPos, camPos + direction)
-    end
+local function aimAtTarget(target)
+    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
+    local pos = target.Character.HumanoidRootPart.Position
+    local camPos = Camera.CFrame.Position
+    Camera.CFrame = CFrame.new(camPos, Vector3.new(pos.X, pos.Y, pos.Z))
 end
 
-function doSilentAim()
-    if not cheats.SilentAim then aimTarget = nil return end
-    aimTarget = getClosestEnemyToCursor()
-end
-
-local oldNamecall = nil
+local SilentAimTarget = nil
+local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
-    if cheats.SilentAim and aimTarget and tostring(method) == "FindPartOnRayWithIgnoreList" then
+    if cheats["SilentAim"] and SilentAimTarget and tostring(method) == "FindPartOnRayWithIgnoreList" then
         local args = {...}
-        if aimTarget.Character and aimTarget.Character:FindFirstChild("Head") then
-            local head = aimTarget.Character.Head.Position
+        if SilentAimTarget.Character and SilentAimTarget.Character:FindFirstChild("Head") then
             local camPos = Camera.CFrame.Position
-            local dir = (head - camPos).Unit * 500
-            args[1] = Ray.new(camPos, dir)
+            local tgt = SilentAimTarget.Character.Head.Position
+            args[1] = Ray.new(camPos, (tgt-camPos).Unit*500)
             return oldNamecall(self, unpack(args))
         end
     end
     return oldNamecall(self, ...)
 end)
 
-function removeESP()
-    for _, v in pairs(ESP_Instances) do
+local BoxESP = {}
+local function clearESP()
+    for _, v in pairs(BoxESP) do
         if v and v.Parent then
             v:Destroy()
         end
     end
-    ESP_Instances = {}
+    BoxESP = {}
 end
 
-function createESPForCharacter(char)
-    if not char:FindFirstChild("HumanoidRootPart") then return end
-    local root = char.HumanoidRootPart
-    local gui = Instance.new("BillboardGui")
-    gui.AlwaysOnTop = true
-    gui.Size = UDim2.new(0, 80, 0, 180)
-    gui.Adornee = root
-    gui.Parent = game:GetService("CoreGui")
-    local rect = Instance.new("Frame")
-    rect.Size = UDim2.new(1,0,1,0)
-    rect.BackgroundTransparency = 0.5
-    rect.BackgroundColor3 = Color3.fromRGB(255,0,0)
-    rect.Parent = gui
-    rect.BorderColor3 = Color3.fromRGB(255,0,0)
-    rect.BorderSizePixel = 2
-    table.insert(ESP_Instances, gui)
-end
-
-function updateESP()
-    if not cheats.ESP then
-        removeESP()
-        return
+local function addESP(plr)
+    if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+    local torso = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso") or plr.Character:FindFirstChild("HumanoidRootPart")
+    local lLeg = plr.Character:FindFirstChild("LeftLowerLeg") or plr.Character:FindFirstChild("Left Leg")
+    local rLeg = plr.Character:FindFirstChild("RightLowerLeg") or plr.Character:FindFirstChild("Right Leg")
+    -- Box for body & legs, not changing with distance
+    local bb = Instance.new("BillboardGui")
+    bb.AlwaysOnTop = true
+    bb.Adornee = torso
+    bb.Size = UDim2.new(0, 85, 0, 180)
+    bb.StudsOffset = Vector3.new(0,0,0)
+    bb.Parent = game:GetService("CoreGui")
+    local box = Instance.new("Frame", bb)
+    box.Size = UDim2.new(1,0,1,0)
+    box.BackgroundTransparency = 0.7
+    box.BorderSizePixel = 2
+    box.BorderColor3 = Color3.fromRGB(255,0,0)
+    box.BackgroundColor3 = Color3.fromRGB(255,0,0)
+    -- legs highlight
+    if lLeg then
+        local legESP = Instance.new("BillboardGui")
+        legESP.AlwaysOnTop = true
+        legESP.Adornee = lLeg
+        legESP.Size = UDim2.new(0, 24, 0, 55)
+        legESP.StudsOffset = Vector3.new(0,0,0)
+        legESP.Parent = game:GetService("CoreGui")
+        local legBox = Instance.new("Frame", legESP)
+        legBox.Size = UDim2.new(1,0,1,0)
+        legBox.BackgroundTransparency = 0.7
+        legBox.BorderSizePixel = 1
+        legBox.BorderColor3 = Color3.fromRGB(255,0,0)
+        legBox.BackgroundColor3 = Color3.fromRGB(255,0,0)
+        table.insert(BoxESP, legESP)
     end
-    removeESP()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if isEnemy(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            createESPForCharacter(player.Character)
+    if rLeg then
+        local legESP = Instance.new("BillboardGui")
+        legESP.AlwaysOnTop = true
+        legESP.Adornee = rLeg
+        legESP.Size = UDim2.new(0, 24, 0, 55)
+        legESP.StudsOffset = Vector3.new(0,0,0)
+        legESP.Parent = game:GetService("CoreGui")
+        local legBox = Instance.new("Frame", legESP)
+        legBox.Size = UDim2.new(1,0,1,0)
+        legBox.BackgroundTransparency = 0.7
+        legBox.BorderSizePixel = 1
+        legBox.BorderColor3 = Color3.fromRGB(255,0,0)
+        legBox.BackgroundColor3 = Color3.fromRGB(255,0,0)
+        table.insert(BoxESP, legESP)
+    end
+    table.insert(BoxESP, bb)
+end
+
+local function addAllESP()
+    clearESP()
+    if not cheats["ESP"] then return end
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if isEnemy(plr) then
+            addESP(plr)
         end
     end
 end
 
 Players.PlayerAdded:Connect(function(plr)
     plr.CharacterAdded:Connect(function()
-        updateESP()
+        addAllESP()
     end)
 end)
 Players.PlayerRemoving:Connect(function()
-    updateESP()
+    addAllESP()
 end)
 
-local menuGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-menuGui.Name = "HileMenusu"
-menuGui.ResetOnSpawn = false
-
-local bg = Instance.new("Frame", menuGui)
-bg.Position = UDim2.new(0, menu.X, 0, menu.Y)
-bg.Size = UDim2.new(0, menu.Width, 0, menu.Height)
-bg.BackgroundColor3 = Color3.fromRGB(255,255,255)
-bg.BorderColor3 = Color3.fromRGB(25,25,25)
-bg.BorderSizePixel = 2
-bg.Visible = false
-
-local title = Instance.new("TextLabel", bg)
-title.Text = "ROBLOX HİLE MENÜSÜ"
-title.TextColor3 = Color3.fromRGB(0,0,0)
-title.Size = UDim2.new(1,0,0,40)
-title.Position = UDim2.new(0,0,0,0)
-title.BackgroundTransparency = 1
-title.Font = Enum.Font.SourceSansBold
-title.TextScaled = true
-
-local options = {"Aimbot","ESP","SilentAim"}
-local buttons = {}
-
-for i, opt in ipairs(options) do
-    local btn = Instance.new("TextButton", bg)
-    btn.Size = UDim2.new(1,-30,0,36)
-    btn.Position = UDim2.new(0,15,0,45+(i-1)*55)
-    btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    btn.BorderSizePixel = 0
-    btn.Text = opt
-    btn.Name = opt
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 21
-    btn.AutoButtonColor = false
-    btn.MouseButton1Click:Connect(function()
-        cheats[opt] = not cheats[opt]
-        btn.BackgroundColor3 = cheats[opt] and Color3.fromRGB(70,70,70) or Color3.fromRGB(30,30,30)
-        if opt == "ESP" then
-            updateESP()
-        end
-    end)
-    btn.BackgroundColor3 = cheats[opt] and Color3.fromRGB(70,70,70) or Color3.fromRGB(30,30,30)
-    buttons[opt] = btn
+local function updateMenuColor(btn, enabled)
+    if enabled then
+        btn.BackgroundColor3 = Color3.fromRGB(65,65,65)
+    else
+        btn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    end
 end
 
-UserInputService.InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.Insert then
-        menu.Visible = not menu.Visible
-        bg.Visible = menu.Visible
+local gui = Instance.new("ScreenGui")
+gui.Name = "hileMenusu"
+gui.Parent = game:GetService("CoreGui")
+gui.ResetOnSpawn = false
+
+local bg = Instance.new("Frame")
+bg.Parent = gui
+bg.Size = UDim2.new(0, menuSize.X, 0, menuSize.Y)
+bg.Position = UDim2.new(0, menuPos.X, 0, menuPos.Y)
+bg.BackgroundColor3 = Color3.fromRGB(255,255,255)
+bg.BorderSizePixel = 2
+bg.BorderColor3 = Color3.fromRGB(10,10,10)
+bg.Visible = menuOpen
+bg.Active = true
+bg.Draggable = false
+
+local topBar = Instance.new("Frame", bg)
+topBar.Size = UDim2.new(1,0,0,35)
+topBar.Position = UDim2.new(0,0,0,0)
+topBar.BackgroundColor3 = Color3.fromRGB(40,40,40)
+
+local title = Instance.new("TextLabel")
+title.Parent = topBar
+title.Position = UDim2.new(0,0,0,0)
+title.Size = UDim2.new(1,0,1,0)
+title.Text = "ROBLOX HİLE MENÜSÜ"
+title.Font = Enum.Font.SourceSansBold
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextScaled = true
+title.BackgroundTransparency = 1
+
+local optionHeight = 50
+local optionPad = 12
+
+local optionNames = {"Aimbot", "ESP", "SilentAim"}
+local optionDetails = {
+    ["Aimbot"] = "Düşmanlara otomatik hedef",
+    ["ESP"] = "Kırmızı karakter kasa ESP",
+    ["SilentAim"] = "Gizli otomatik ateş"
+}
+local currY = 38
+local buttons = {}
+
+for i, name in ipairs(optionNames) do
+    local btn = Instance.new("TextButton")
+    btn.Parent = bg
+    btn.Name = name.."Btn"
+    btn.Size = UDim2.new(0.75,0,0,optionHeight-10)
+    btn.Position = UDim2.new(0.13,0,0, currY)
+    btn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    btn.Text = name
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 22
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.BorderSizePixel = 0
+    local desc = Instance.new("TextLabel", bg)
+    desc.Size = UDim2.new(1, -45, 0, 16)
+    desc.Position = UDim2.new(0.14,0,0,currY + 32)
+    desc.Text = optionDetails[name]
+    desc.TextColor3 = Color3.fromRGB(0,0,0)
+    desc.Font = Enum.Font.SourceSans
+    desc.TextSize = 16
+    desc.BackgroundTransparency = 1
+    desc.ZIndex = 2
+    desc.TextXAlignment = Enum.TextXAlignment.Left
+    btn.MouseButton1Click:Connect(function()
+        cheats[name] = not cheats[name]
+        updateMenuColor(btn, cheats[name])
+        if name == "ESP" then
+            addAllESP()
+        end
+    end)
+    updateMenuColor(btn, cheats[name])
+    buttons[name] = btn
+    currY = currY + optionHeight
+end
+
+UIS.InputBegan:Connect(function(input,gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.Insert then
+        menuOpen = not menuOpen
+        bg.Visible = menuOpen
     end
 end)
 
-RunService.RenderStepped:Connect(function()
-    if cheats.Aimbot then
-        doAimbot()
+topBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragOffset = Vector2.new(UIS:GetMouseLocation().X, UIS:GetMouseLocation().Y) - Vector2.new(bg.Position.X.Offset, bg.Position.Y.Offset)
     end
-    if cheats.SilentAim then
-        doSilentAim()
+end)
+topBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local mouseLoc = UIS:GetMouseLocation()
+        bg.Position = UDim2.new(0, mouseLoc.X - dragOffset.X, 0, mouseLoc.Y - dragOffset.Y)
+    end
+end)
+
+RS.RenderStepped:Connect(function()
+    if cheats["Aimbot"] then
+        local tgt = getClosestEnemy()
+        if tgt then
+            aimAtTarget(tgt)
+        end
+    end
+    if cheats["SilentAim"] then
+        SilentAimTarget = getClosestEnemy()
     else
-        aimTarget = nil
+        SilentAimTarget = nil
     end
 end)
 
-updateESP()
+addAllESP()
