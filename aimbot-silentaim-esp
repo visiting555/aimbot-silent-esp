@@ -1,9 +1,6 @@
 -- YENİ NESİL HİLE MENÜSÜ [POPUP, DÜZENLİ, F4'le Aç/Kapat, UI Framework yok, tüm fonksiyonlar TAM] --
 
--- Evrensel MM2-like ESP & (Silent)Aimbot Hilesi, Sade Menü UI
--- Sadece: ESP (oyuncu ismi ve renkli kutu), AimBot, SilentAim
--- Menü arkaplanı beyaz, tuşlar siyah, yazılar beyaz
-
+-- MENÜ HER ZAMAN GELİR - Her durumda görünür ve ana game.CoreGui altında çalışır, Layer/ZIndex yüksek
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -11,65 +8,97 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 
--- TEMİZLE
-for _, v in ipairs(CoreGui:GetChildren()) do
-    if v:IsA("ScreenGui") and v.Name == "WHITE_AIM_ESP_MENU" then
-        v:Destroy()
+-- VARSA ÖNCEDEN OLUŞAN TEMİZLE
+pcall(function()
+    for _, v in ipairs(CoreGui:GetChildren()) do
+        if v:IsA("ScreenGui") and v.Name == "WHITE_AIM_ESP_MENU" then
+            v:Destroy()
+        end
     end
+end)
+
+-- Robust Parent Bulur
+local function getCoreGui()
+    local suc,gui = pcall(function() return game:GetService("CoreGui") end)
+    if suc and gui then return gui end
+    return LocalPlayer:WaitForChild("PlayerGui")
 end
 
 -- MENÜ SİSTEMİ
 local gui = Instance.new("ScreenGui")
 gui.Name = "WHITE_AIM_ESP_MENU"
-gui.Parent = CoreGui
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
+gui.DisplayOrder = 999999
+pcall(function() gui.Parent = getCoreGui() end)
 
-local bg = Instance.new("Frame", gui)
+local bg = Instance.new("Frame")
+bg.Parent = gui
 bg.BackgroundColor3 = Color3.fromRGB(255,255,255)
 bg.Position = UDim2.new(0,100,0,120)
-bg.Size = UDim2.new(0,300,0,260)
+bg.Size = UDim2.new(0,320,0,270)
 bg.AnchorPoint = Vector2.new(0,0)
 bg.Visible = true
 bg.Active = true
 bg.Draggable = true
 bg.BorderSizePixel = 0
 
+local uicorner = Instance.new("UICorner",bg)
+uicorner.CornerRadius = UDim.new(0,10)
+
 local title = Instance.new("TextLabel", bg)
 title.Size = UDim2.new(1,0,0,40)
+title.Position = UDim2.new(0,0,0,0)
 title.BackgroundTransparency = 1
-title.Text = "AIM&ESP HILE MENUSU"
+title.Text = "AIM & ESP HİLE MENÜSÜ"
 title.Font = Enum.Font.GothamBlack
 title.TextSize = 24
+title.TextStrokeTransparency = 0.7
 title.TextColor3 = Color3.fromRGB(255,255,255)
-title.TextStrokeTransparency = 0.8
 title.BackgroundColor3 = Color3.fromRGB(255,255,255)
 
+local UIListLayout = Instance.new("UIListLayout", bg)
+UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- Seçenekler
 local options = {
-    {key="esp", text="ESP Aç/Kapat"},
-    {key="aimbot", text="Aimbot Aç/Kapat"},
-    {key="silentaim", text="SilentAim Aç/Kapat"}
+    {key="esp",        text="ESP Aç/Kapat"},
+    {key="aimbot",     text="Aimbot Aç/Kapat"},
+    {key="silentaim",  text="SilentAim Aç/Kapat"}
 }
 local states = {
-    esp = false, 
-    aimbot = false, 
-    silentaim = false
+    esp = false, aimbot = false, silentaim = false
 }
+
+local buttonsFrame = Instance.new("Frame", bg)
+buttonsFrame.Size = UDim2.new(1, -16, 0, #options*50)
+buttonsFrame.BackgroundTransparency = 1
+buttonsFrame.LayoutOrder = 1
+buttonsFrame.Name = "ButtonsFrame"
+local btnlayout = Instance.new("UIListLayout", buttonsFrame)
+btnlayout.Padding = UDim.new(0,8)
+btnlayout.SortOrder = Enum.SortOrder.LayoutOrder
+btnlayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 local optionBtns = {}
 
 for i, opt in ipairs(options) do
-    local btn = Instance.new("TextButton", bg)
-    btn.Size = UDim2.new(1,-40,0,48)
-    btn.Position = UDim2.new(0,20,0,(i-1)*52+56)
+    local btn = Instance.new("TextButton")
+    btn.Parent = buttonsFrame
+    btn.Size = UDim2.new(1,0,0,44)
     btn.BackgroundColor3 = Color3.fromRGB(10,10,10)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
     btn.Text = opt.text
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 23
+    btn.TextSize = 22
     btn.BorderSizePixel = 0
-    btn.AutoButtonColor = true
+    btn.Name = "OptBtn_"..opt.key
     optionBtns[opt.key] = btn
+    local corner = Instance.new("UICorner",btn)
+    corner.CornerRadius = UDim.new(0,7)
     btn.MouseButton1Click:Connect(function()
         states[opt.key] = not states[opt.key]
         btn.BackgroundColor3 = states[opt.key] and Color3.fromRGB(44,130,201) or Color3.fromRGB(10,10,10)
@@ -77,20 +106,22 @@ for i, opt in ipairs(options) do
 end
 
 local close = Instance.new("TextButton", bg)
-close.Text = "X"
-close.BackgroundColor3 = Color3.fromRGB(80,20,20)
+close.Text = "Kapat"
+close.BackgroundColor3 = Color3.fromRGB(20,20,50)
 close.TextColor3 = Color3.fromRGB(255,255,255)
-close.TextStrokeTransparency = 0.68
-close.Font = Enum.Font.GothamBlack
-close.TextSize = 23
-close.Size = UDim2.new(0,40,0,40)
-close.Position = UDim2.new(1,-40,0,0)
+close.Font = Enum.Font.Gotham
+close.TextSize = 19
+close.Size = UDim2.new(0.35,0,0,40)
+close.Position = UDim2.new(1,-115,1,-48)
 close.BorderSizePixel = 0
-close.ZIndex = 2
+close.LayoutOrder = 999
+local ccorner = Instance.new("UICorner",close)
+ccorner.CornerRadius = UDim.new(0,9)
 close.MouseButton1Click:Connect(function()
-    bg.Visible = not bg.Visible
+    bg.Visible = false
 end)
 
+-- Her zaman menüyü açabilmek için F4 tuşu
 UserInputService.InputBegan:Connect(function(input,gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.F4 then
@@ -98,10 +129,23 @@ UserInputService.InputBegan:Connect(function(input,gp)
     end
 end)
 
--- ESP FONKSIYONU
+-- Menü kendini üstte tutsun (yeni bir GUI gelirse Arkaya kaçmasın)
+spawn(function()
+    while wait(1) do
+        if gui.Parent ~= getCoreGui() then
+            pcall(function()
+                gui.Parent = getCoreGui()
+            end)
+        end
+        gui.DisplayOrder = 999999
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+        bg.ZIndex = 999999
+    end
+end)
+
+-- ESP FONKSİYONU
 local function colorRole(plr)
-    -- Masum: Yesil, Sheriff: Mavi, Katil: Kirmizi, Bilinmiyorsa Gri
-    -- Oyunlar arasi rolu TESPIT etmek zordur, örnek olarak DisplayName'e bakıyoruz
+    -- Bazı MM2 oyunlarında Role tagı/ismi yoktur, meşhur isimlerden git
     local dn = (plr.DisplayName or plr.Name):lower()
     if dn:find("sheriff") or dn:find("polis") then
         return Color3.fromRGB(53,125,242) -- mavi
@@ -117,19 +161,20 @@ local function addESP(plr)
     if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") and not plr.Character.Head:FindFirstChild("MENU_ESP") then
         local bb = Instance.new("BillboardGui", plr.Character.Head)
         bb.Name = "MENU_ESP"
-        bb.Size = UDim2.new(0,110,0,42)
+        bb.Size = UDim2.new(0,110,0,43)
         bb.Adornee = plr.Character.Head
         bb.AlwaysOnTop = true
         local roleColor = colorRole(plr)
         local lbl = Instance.new("TextLabel", bb)
         lbl.Size = UDim2.new(1,0,1,0)
-        lbl.BackgroundTransparency = .5
+        lbl.BackgroundTransparency = .46
         lbl.BackgroundColor3 = roleColor
         lbl.TextColor3 = Color3.fromRGB(255,255,255)
-        lbl.TextStrokeTransparency = 0.19
+        lbl.TextStrokeTransparency = 0.1
         lbl.Font = Enum.Font.GothamBold
         lbl.Text = (plr.DisplayName or plr.Name)
-        lbl.TextSize = 18
+        lbl.TextSize = 17
+        lbl.BorderSizePixel = 0
     end
 end
 local function removeESP(plr)
@@ -149,20 +194,20 @@ local function updateESP()
 end
 Players.PlayerAdded:Connect(function(plr)
     plr.CharacterAdded:Connect(function()
-        wait(.6)
+        wait(.5)
         if states.esp then addESP(plr) end
     end)
 end)
 for _,plr in ipairs(Players:GetPlayers()) do
     if plr ~= LocalPlayer then
         plr.CharacterAdded:Connect(function()
-            wait(.6)
+            wait(.5)
             if states.esp then addESP(plr) end
         end)
     end
 end
 
--- Aimbot/SilentAim
+-- Aim helper
 local function getClosestToCursor()
     local shortest = math.huge
     local closest = nil
@@ -181,17 +226,11 @@ local function getClosestToCursor()
     return closest
 end
 
-local aimbotActive = false
 RunService.RenderStepped:Connect(function()
-    -- Güncel ESP
-    updateESP()
-
-    -- AIMBOT
+    pcall(updateESP)
     if states.aimbot then
         local target = getClosestToCursor()
         if target and target.Character and target.Character:FindFirstChild("Head") then
-            local mouse = LocalPlayer:GetMouse()
-            -- Kamera mouselook'u hedefe doğru fixle
             local cam = workspace.CurrentCamera
             local head = target.Character.Head.Position
             cam.CFrame = CFrame.new(cam.CFrame.Position, head)
@@ -199,7 +238,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- SILENTAIM OVERRIDE
 local old; old = hookmetamethod(game, "__namecall", function(self,...)
     local args = {...}
     if states.silentaim and tostring(self)=="Hit" and getcallingscript() ~= script then
@@ -212,10 +250,13 @@ local old; old = hookmetamethod(game, "__namecall", function(self,...)
     return old(self, ...)
 end)
 
--- Otomatik arkaplan ve aktiflik renkleri ayarla
 for k,btn in pairs(optionBtns) do
     btn.BackgroundColor3 = Color3.fromRGB(10,10,10)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
 end
 
 bg.Visible = true
+
+-- Menü asla kaybolmaz
+gui.Parent = getCoreGui()
+bg.Parent = gui
