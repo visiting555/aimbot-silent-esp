@@ -156,11 +156,12 @@ UserInputService.InputBegan:Connect(function(input,gp)
 end)
 
 local espObjects = {}
+
 function clearEsp()
     for _, obj in ipairs(espObjects) do
-        if obj.Box then pcall(function() obj.Box:Remove() end) end
-        if obj.Head then pcall(function() obj.Head:Remove() end) end
-        if obj.Skeleton then for _,l in ipairs(obj.Skeleton) do pcall(function() l:Remove() end) end end
+        if obj.Box and typeof(obj.Box.Remove) == "function" then pcall(function() obj.Box:Remove() end) end
+        if obj.Head and typeof(obj.Head.Remove) == "function" then pcall(function() obj.Head:Remove() end) end
+        if obj.Skeleton then for _,l in ipairs(obj.Skeleton) do if typeof(l.Remove) == "function" then pcall(function() l:Remove() end) end end end
     end
     espObjects = {}
 end
@@ -205,7 +206,6 @@ local function parttbl(char)
     }
 end
 
--- ESP drawing, always fresh and correct, all white, as wanted
 local function renderEsp()
     clearEsp()
     for _,plr in ipairs(Players:GetPlayers()) do
@@ -223,7 +223,6 @@ local function renderEsp()
                 continue
             end
 
-            -- Calculate bounding box only on main bodyparts so always correct
             local mainParts = {"Head", "Root", "UpperTorso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"}
             local minX, minY, maxX, maxY = math.huge, math.huge, -math.huge, -math.huge
             local positions, onScreenCount = {}, 0
@@ -245,28 +244,27 @@ local function renderEsp()
             if onScreenCount >= 2 then
                 local box = DBox()
                 box.Position = Vector2.new(minX, minY)
-                box.Size = Vector2.new(math.max(14, maxX-minX), math.max(38, maxY-minY)) -- stays always same (or min bound)
+                box.Size = Vector2.new(math.max(14, maxX-minX), math.max(38, maxY-minY))
                 box.Visible = true
 
-                -- Head circle
+                local circ = nil
                 if positions.Head then
-                    local circ = DCircle()
+                    circ = DCircle()
                     circ.Position = Vector2.new(positions.Head.X, positions.Head.Y)
                     circ.Radius = math.clamp((maxX-minX)/7, 13, 38)
                     circ.Visible = true
+                end
 
-                    -- Skeleton
-                    local skeleton = {}
-
-                    -- Head-to-root
+                local skeleton = {}
+                if circ then
+                    -- Head-root
                     if positions.Head and positions.Root then
                         local l = DLine()
                         l.From = Vector2.new(positions.Head.X, positions.Head.Y + circ.Radius)
                         l.To = Vector2.new(positions.Root.X, positions.Root.Y)
                         table.insert(skeleton, l)
                     end
-
-                    -- UpperTorso-to-arms
+                    -- UpperTorso-arms
                     if positions.UpperTorso and positions.LeftArm then
                         local l = DLine()
                         l.From = Vector2.new(positions.UpperTorso.X, positions.UpperTorso.Y)
@@ -279,8 +277,7 @@ local function renderEsp()
                         l.To = Vector2.new(positions.RightArm.X, positions.RightArm.Y)
                         table.insert(skeleton, l)
                     end
-
-                    -- Root-to-legs
+                    -- Root-legs
                     if positions.Root and positions.LeftLeg then
                         local l = DLine()
                         l.From = Vector2.new(positions.Root.X, positions.Root.Y)
@@ -293,29 +290,28 @@ local function renderEsp()
                         l.To = Vector2.new(positions.RightLeg.X, positions.RightLeg.Y)
                         table.insert(skeleton, l)
                     end
-
-                    table.insert(espObjects, {Box = box, Head = circ, Skeleton = skeleton})
                 end
+
+                table.insert(espObjects, {Box = box, Head = circ, Skeleton = skeleton})
             end
         end
     end
 end
 
--- Returns the closest enemy player head to mouse (not own team)
 local function getClosestEnemyToMouse()
     local closest, minDist = nil, math.huge
     for _,plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer 
-        and plr.Team ~= nil and LocalPlayer.Team ~= nil
-        and plr.Team ~= LocalPlayer.Team
-        and plr.Character and plr.Character:FindFirstChild("Head") 
-        and plr.Character:FindFirstChild("Humanoid")
-        and plr.Character.Humanoid.Health > 0 then
+            and plr.Team ~= nil and LocalPlayer.Team ~= nil
+            and plr.Team ~= LocalPlayer.Team
+            and plr.Character and plr.Character:FindFirstChild("Head")
+            and plr.Character:FindFirstChild("Humanoid")
+            and plr.Character.Humanoid.Health > 0 then
             local head = plr.Character.Head
             local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
             if onScreen then
                 local dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
-                if dist < minDist and dist <= 500 then
+                if dist < minDist and dist <= 1000 then -- make big for max aimbot range
                     closest = head
                     minDist = dist
                 end
@@ -325,58 +321,67 @@ local function getClosestEnemyToMouse()
     return closest
 end
 
--- Use proper input for mouse movement
-local function moveMouseTo(x, y)
-    -- for best compatibility
-    if type(mouse_event) == "function" then
-        mouse_event(1, x, y, 0, 0)
+local function moveMouseTo(dx, dy)
+    -- best supports for all popular executors
+    if writeclipboard and (isrbxactive and isrbxactive() or true) then
+        -- fake movement using VirtualInputManager if possible
+        local vim = game:GetService("VirtualInputManager")
+        vim:SendMouseMove(Mouse.X+dx, Mouse.Y+dy)
     elseif type(mousemoverel) == "function" then
-        mousemoverel(x, y)
+        mousemoverel(dx, dy)
+    elseif type(mouse_event) == "function" then
+        mouse_event(1, dx, dy, 0, 0)
     end
 end
 
--- Aimbot function: always dead accurate head aimbot on enemies, never teammates
 local function aimAt(target)
     if not target then return end
     local pos = Camera:WorldToViewportPoint(target.Position)
-    -- extra snapping for closest accuracy
     local dx, dy = pos.X - Mouse.X, pos.Y - Mouse.Y
     moveMouseTo(dx, dy)
 end
 
 local silentTarget = nil
+local __namecall
 do
     local mt = getrawmetatable(game)
-    local old
-    old = hookmetamethod(game, "__namecall", function(self, ...)
-        local namecall = getnamecallmethod and getnamecallmethod() or ""
+    setreadonly(mt, false)
+    local old = mt.__namecall
+    __namecall = function(self, ...)
+        local method = getnamecallmethod and getnamecallmethod() or ""
         local args = {...}
-        if settings.SilentAim and tostring(namecall) == "FireServer" then
+        if settings.SilentAim and tostring(method):lower() == "fireserver" then
             local s = tostring(self):lower()
-            -- hit, bullet, shoot etc.
             if (s:find("hit") or s:find("bullet") or s:find("shoot")) and silentTarget and silentTarget.Parent then
                 args[1] = silentTarget
                 return old(self, unpack(args))
             end
         end
         return old(self, ...)
-    end)
+    end
+
+    if hookmetamethod then
+        hookmetamethod(game, "__namecall", newcclosure(__namecall))
+    else
+        mt.__namecall = newcclosure(__namecall)
+    end
 end
 
 RunService.RenderStepped:Connect(function()
+    -- Aimbot
     if settings.Aimbot then
         local target = getClosestEnemyToMouse()
         if target and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             aimAt(target)
         end
     end
-
+    -- ESP
     if settings.ESP then
         renderEsp()
     else
         clearEsp()
     end
-
+    -- SilentAim
     if settings.SilentAim then
         silentTarget = getClosestEnemyToMouse()
     else
