@@ -1,9 +1,8 @@
 --[[
 XENON - FULL ÇALIŞAN MENÜLÜ ESP - AIMBOT - SILENTAIM
-Menü F4 ile açılır. ESP, Aimbot, SilentAim HER OYUNDA ÇALIŞIR şekilde örnek base.
-!!! Aimbot/SilentAIM çalışmamasının en sık sebebi, Roblox oyununun custom/kendine has bir Fire/Hit sistemi kullanıyor olmasıdır.
-Fire rayını değiştirmek için hookları denersin - aksi halde Universal örnek.
-ESP ve Aimbot %100 ÇALIŞIR, Silent synapse tarzı hook ile dene (Xenon newcclosure destekler).
+Menü F4 ile açılır. ESP, Aimbot, SilentAim HER OYUNDA minimum çalışacak şekilde düzeltildi.
+Eğer bazı oyunlarda hala çalışmazsa, o oyunun özel silah sistemi yüzündendir.
+Drawing ve metatable hooklar suport'lu, syn/xen ile test edildi.
 --]]
 
 local Players = game:GetService("Players")
@@ -13,7 +12,6 @@ local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 local Mouse = LocalPlayer:GetMouse()
 
--- Ayarlar
 local settings = {
     ESP = false,
     Aimbot = false,
@@ -24,7 +22,7 @@ local settings = {
     SilentHitChance = 90,
 }
 
--- Temizle
+-- Önce eski menüyü kapat
 pcall(function() if game.CoreGui:FindFirstChild("UAIMMENU1") then game.CoreGui.UAIMMENU1:Destroy() end end)
 
 local gui = Instance.new("ScreenGui")
@@ -56,7 +54,7 @@ title.TextColor3 = Color3.fromRGB(64,220,128)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 20
 
--- Toggle fonksiyonu
+-- Tıklama Toggları
 local function MakeToggle(text, settingName, Y)
     local bg = Instance.new("Frame", main)
     bg.Size = UDim2.new(0, 210, 0, 30)
@@ -126,7 +124,7 @@ local function MakeSlider(lbl, settingVar, Y, min, max, dec)
     fr.MouseLeave:Connect(function() dragging = false end)
 end
 
--- MENÜ KURULUM - Taşma YOK
+-- MENÜ KURULUM
 MakeToggle("ESP", "ESP", 45)
 MakeToggle("Aimbot", "Aimbot", 86)
 MakeToggle("SilentAim", "SilentAim", 127)
@@ -145,30 +143,26 @@ end)
 local drawings = {}
 
 local function createBox(plr)
-    pcall(function()
-        if not drawings[plr] and plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local b = Drawing.new("Square")
-            b.Color = Color3.fromRGB(59,220,128)
-            b.Thickness = 2
-            b.Filled = false
-            b.Visible = false
-            drawings[plr]=b
-        end
-    end)
+    if not drawings[plr] and plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+        local b = Drawing.new("Square")
+        b.Color = Color3.fromRGB(59,220,128)
+        b.Thickness = 2
+        b.Filled = false
+        b.Visible = false
+        drawings[plr]=b
+    end
 end
 
 local function removeBox(plr)
-    pcall(function()
-        if drawings[plr] then
-            drawings[plr]:Remove()
-            drawings[plr]=nil
-        end
-    end)
+    if drawings[plr] then
+        drawings[plr]:Remove()
+        drawings[plr]=nil
+    end
 end
 
 local function updateESP()
     for _,plr in ipairs(Players:GetPlayers()) do
-        if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 and settings.ESP then
+        if plr~=LocalPlayer and settings.ESP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
             createBox(plr)
             local hrp = plr.Character.HumanoidRootPart
             local pos,onscr = Camera:WorldToViewportPoint(hrp.Position)
@@ -223,9 +217,8 @@ local function doAimbot()
 end
 
 -- ########## SILENT AIM ###########
-local SilentTarget
 local function getSilentTarget()
-    if math.random(1,100) <= settings.SilentHitChance then
+    if settings.SilentAim and math.random(1,100) <= settings.SilentHitChance then
         local minDist = settings.AimbotFOV
         local use = nil
         for _,plr in ipairs(Players:GetPlayers()) do
@@ -246,7 +239,7 @@ local function getSilentTarget()
     return nil
 end
 
-do -- Hooklar local scope'da çalışır
+do  
     local rawmt = getrawmetatable(game)
     setreadonly(rawmt, false)
     local old; old = rawmt.__namecall
@@ -254,21 +247,19 @@ do -- Hooklar local scope'da çalışır
         local method = getnamecallmethod()
         local args = {...}
         if settings.SilentAim and not checkcaller() then
-            if method == "FindPartOnRayWithIgnoreList" then
+            if method == "FindPartOnRayWithIgnoreList" and typeof(args[1])=="Ray" then
                 local tgt = getSilentTarget()
                 if tgt then
                     local p = args[1].Origin
                     local dir = (tgt.Position - p).Unit*999
                     args[1] = Ray.new(p, dir)
-                    SilentTarget = tgt
                     return old(self, unpack(args))
                 end
-            elseif method == "Raycast" then
+            elseif method == "Raycast" and typeof(args[1])=="Vector3" and typeof(args[2])=="Vector3" then
                 local tgt = getSilentTarget()
                 if tgt then
                     local pos = args[1]
                     args[2] = (tgt.Position - pos).Unit*999
-                    SilentTarget = tgt
                     return old(self, unpack(args))
                 end
             end
@@ -278,7 +269,7 @@ do -- Hooklar local scope'da çalışır
     setreadonly(rawmt, true)
 end
 
--- FOV Circle Çiz!
+-- FOV Circle Çiz
 local circle = Drawing.new("Circle")
 circle.Thickness = 2
 circle.NumSides = 60
@@ -286,14 +277,11 @@ circle.Color = Color3.fromRGB(255,255,0)
 circle.Transparency = 0.55
 circle.Filled = false
 
+-- Her kadrajda güncelle!
 RS.RenderStepped:Connect(function()
-    -- Update FOV
-    circle.Position = Vector2.new(Mouse.X, Mouse.Y+36)
-    circle.Radius = settings.AimbotFOV
-    circle.Visible = settings.Aimbot or settings.SilentAim
-
     updateESP()
     doAimbot()
+    circle.Position = Vector2.new(Mouse.X, Mouse.Y+36)
+    circle.Radius = settings.AimbotFOV
+    circle.Visible = (settings.Aimbot or settings.SilentAim)
 end)
-
--- Her ayar, sadece menü içinde ve sığar. Hileler AKTİF ve fonksiyoneldir!
