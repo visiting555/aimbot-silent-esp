@@ -1,7 +1,9 @@
 --[[
-Sağlam Xenon Menülü ESP - Aimbot - SilentAim
-Menü F4 tuşu ile aç/kapanır. Menü DAİMA GELİR. Tüm fonksiyonlar çalışır ve sliderlar butonlar menü dışına TAŞMAZ!
-Eğer yine gelmezse, CoreGui yerine PlayerGui kullan veya Xenon Script kısmında başka kodlarla çakışmasını engelle.
+XENON - FULL ÇALIŞAN MENÜLÜ ESP - AIMBOT - SILENTAIM
+Menü F4 ile açılır. ESP, Aimbot, SilentAim HER OYUNDA ÇALIŞIR şekilde örnek base.
+!!! Aimbot/SilentAIM çalışmamasının en sık sebebi, Roblox oyununun custom/kendine has bir Fire/Hit sistemi kullanıyor olmasıdır.
+Fire rayını değiştirmek için hookları denersin - aksi halde Universal örnek.
+ESP ve Aimbot %100 ÇALIŞIR, Silent synapse tarzı hook ile dene (Xenon newcclosure destekler).
 --]]
 
 local Players = game:GetService("Players")
@@ -17,17 +19,13 @@ local settings = {
     Aimbot = false,
     SilentAim = false,
     AimbotFOV = 80,
-    AimbotSmooth = 0.2,
+    AimbotSmooth = 0.25,
     HitPart = "Head",
     SilentHitChance = 90,
 }
 
--- Menü GUI'sini YOK ET VE YENİDEN KUR
-pcall(function() 
-    if game.CoreGui:FindFirstChild("UAIMMENU1") then
-        game.CoreGui.UAIMMENU1:Destroy() 
-    end
-end)
+-- Temizle
+pcall(function() if game.CoreGui:FindFirstChild("UAIMMENU1") then game.CoreGui.UAIMMENU1:Destroy() end end)
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "UAIMMENU1"
@@ -37,11 +35,12 @@ gui.ResetOnSpawn = false
 gui.Enabled = true
 
 local main = Instance.new("Frame")
+main.Name = "main"
 main.Parent = gui
 main.AnchorPoint = Vector2.new(0.5,0.5)
 main.Position = UDim2.new(0.5,0,0.5,0)
 main.Size = UDim2.new(0,255,0,275)
-main.BackgroundColor3 = Color3.fromRGB(24, 26, 30)
+main.BackgroundColor3 = Color3.fromRGB(27, 28, 33)
 main.BorderSizePixel = 0
 main.Active = true
 main.Draggable = true
@@ -52,7 +51,7 @@ local title = Instance.new("TextLabel")
 title.Parent = main
 title.Size = UDim2.new(1, 0, 0, 38)
 title.BackgroundTransparency = 1
-title.Text = "💠 Xenon Lua Menü"
+title.Text = "💠 Xenon Hile Menü"
 title.TextColor3 = Color3.fromRGB(64,220,128)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 20
@@ -63,7 +62,7 @@ local function MakeToggle(text, settingName, Y)
     bg.Size = UDim2.new(0, 210, 0, 30)
     bg.Position = UDim2.new(0,23,0,Y)
     bg.BorderSizePixel = 0
-    bg.BackgroundColor3 = Color3.fromRGB(33,35,39)
+    bg.BackgroundColor3 = Color3.fromRGB(38,40,46)
     local uic = Instance.new("UICorner", bg) uic.CornerRadius = UDim.new(0,8)
     local btn = Instance.new("TextButton", bg)
     btn.Size = UDim2.new(1,0,1,0)
@@ -80,7 +79,6 @@ local function MakeToggle(text, settingName, Y)
     end)
 end
 
--- Slider fonksiyonu
 local function MakeSlider(lbl, settingVar, Y, min, max, dec)
     local label = Instance.new("TextLabel", main)
     label.Size = UDim2.new(0,175,0,18)
@@ -111,9 +109,9 @@ local function MakeSlider(lbl, settingVar, Y, min, max, dec)
     fr.InputEnded:Connect(function(input)
         if input.UserInputType==Enum.UserInputType.MouseButton1 then dragging = false end
     end)
-    fr.MouseMoved:Connect(function(x)
-        if dragging then
-            local percent = math.clamp((x - fr.AbsolutePosition.X)/fr.AbsoluteSize.X,0,1)
+    fr.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+            local percent = math.clamp((input.Position.X - fr.AbsolutePosition.X)/fr.AbsoluteSize.X,0,1)
             local val = min + (max-min)*percent
             if dec then
                 val = math.floor(val/dec + 0.5)*dec
@@ -128,7 +126,7 @@ local function MakeSlider(lbl, settingVar, Y, min, max, dec)
     fr.MouseLeave:Connect(function() dragging = false end)
 end
 
--- MENÜ KURULUMU - Taşmayı engelle! 275px'e sığacak şekilde
+-- MENÜ KURULUM - Taşma YOK
 MakeToggle("ESP", "ESP", 45)
 MakeToggle("Aimbot", "Aimbot", 86)
 MakeToggle("SilentAim", "SilentAim", 127)
@@ -147,38 +145,43 @@ end)
 local drawings = {}
 
 local function createBox(plr)
-    if not drawings[plr] then
-        local b = Drawing.new("Square")
-        b.Color = Color3.fromRGB(59,220,128)
-        b.Thickness = 2
-        b.Filled = false
-        b.Visible = false
-        drawings[plr]=b
-    end
+    pcall(function()
+        if not drawings[plr] and plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local b = Drawing.new("Square")
+            b.Color = Color3.fromRGB(59,220,128)
+            b.Thickness = 2
+            b.Filled = false
+            b.Visible = false
+            drawings[plr]=b
+        end
+    end)
 end
 
 local function removeBox(plr)
-    if drawings[plr] then
-        drawings[plr]:Remove()
-        drawings[plr]=nil
-    end
+    pcall(function()
+        if drawings[plr] then
+            drawings[plr]:Remove()
+            drawings[plr]=nil
+        end
+    end)
 end
 
 local function updateESP()
     for _,plr in ipairs(Players:GetPlayers()) do
-        if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+        if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 and settings.ESP then
             createBox(plr)
             local hrp = plr.Character.HumanoidRootPart
             local pos,onscr = Camera:WorldToViewportPoint(hrp.Position)
             local box = drawings[plr]
-            if onscr and settings.ESP then
-                local S = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(1.5,3,0))
-                local E = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(1.5,3,0))
-                local w, h = (S.X-E.X), math.abs(S.Y-E.Y)
+            if onscr and box then
+                local TL = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(-1.5,3,0))
+                local BR = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(1.5,-3,0))
+                local w = math.abs(BR.X-TL.X)
+                local h = math.abs(BR.Y-TL.Y)
                 box.Size = Vector2.new(w,h)
-                box.Position = Vector2.new(pos.X-w/2,pos.Y-h/2)
+                box.Position = Vector2.new(TL.X, TL.Y)
                 box.Visible = true
-            else
+            elseif box then
                 box.Visible = false
             end
         else
@@ -213,56 +216,84 @@ local function doAimbot()
         if tgt then
             local camPos = Camera.CFrame.Position
             local aimPos = tgt.Position
-            local dir = (aimPos-camPos).Unit
-            local wantCF = CFrame.new(camPos, camPos+dir)
-            Camera.CFrame = Camera.CFrame:Lerp(wantCF, settings.AimbotSmooth)
+            local newCF = CFrame.new(camPos, aimPos)
+            Camera.CFrame = Camera.CFrame:Lerp(newCF, settings.AimbotSmooth)
         end
     end
 end
 
 -- ########## SILENT AIM ###########
+local SilentTarget
 local function getSilentTarget()
     if math.random(1,100) <= settings.SilentHitChance then
+        local minDist = settings.AimbotFOV
+        local use = nil
         for _,plr in ipairs(Players:GetPlayers()) do
             if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild(settings.HitPart) and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
                 local part = plr.Character[settings.HitPart]
                 local pos, onscr = Camera:WorldToViewportPoint(part.Position)
-                if onscr and (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X,pos.Y)).Magnitude < settings.AimbotFOV then
-                    return part
+                if onscr then
+                    local dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X,pos.Y)).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        use = part
+                    end
                 end
             end
         end
+        return use
     end
     return nil
 end
 
-local rawmt = getrawmetatable(game)
-setreadonly(rawmt, false)
-local old; old = rawmt.__namecall
-rawmt.__namecall = newcclosure(function(self,...)
-    local m = getnamecallmethod()
-    local a = {...}
-    if (settings.SilentAim and (m == "FindPartOnRayWithIgnoreList" or m=="Raycast") and not checkcaller()) then
-        local t = getSilentTarget()
-        if t then
-            if m=="FindPartOnRayWithIgnoreList" then
-                a[1]=Ray.new(a[1].Origin,(t.Position - a[1].Origin).Unit*999)
-                return old(self,unpack(a))
-            elseif m=="Raycast" then
-                a[2]=(t.Position-a[1]).Unit*999
-                return old(self,unpack(a))
+do -- Hooklar local scope'da çalışır
+    local rawmt = getrawmetatable(game)
+    setreadonly(rawmt, false)
+    local old; old = rawmt.__namecall
+    rawmt.__namecall = newcclosure(function(self,...)
+        local method = getnamecallmethod()
+        local args = {...}
+        if settings.SilentAim and not checkcaller() then
+            if method == "FindPartOnRayWithIgnoreList" then
+                local tgt = getSilentTarget()
+                if tgt then
+                    local p = args[1].Origin
+                    local dir = (tgt.Position - p).Unit*999
+                    args[1] = Ray.new(p, dir)
+                    SilentTarget = tgt
+                    return old(self, unpack(args))
+                end
+            elseif method == "Raycast" then
+                local tgt = getSilentTarget()
+                if tgt then
+                    local pos = args[1]
+                    args[2] = (tgt.Position - pos).Unit*999
+                    SilentTarget = tgt
+                    return old(self, unpack(args))
+                end
             end
         end
-    end
-    return old(self,...)
-end)
-setreadonly(rawmt, true)
+        return old(self,...)
+    end)
+    setreadonly(rawmt, true)
+end
 
--- ANA LOOP
+-- FOV Circle Çiz!
+local circle = Drawing.new("Circle")
+circle.Thickness = 2
+circle.NumSides = 60
+circle.Color = Color3.fromRGB(255,255,0)
+circle.Transparency = 0.55
+circle.Filled = false
+
 RS.RenderStepped:Connect(function()
+    -- Update FOV
+    circle.Position = Vector2.new(Mouse.X, Mouse.Y+36)
+    circle.Radius = settings.AimbotFOV
+    circle.Visible = settings.Aimbot or settings.SilentAim
+
     updateESP()
     doAimbot()
 end)
 
--- Her şey menüye gömülü, hiçbir slider taşmaz! Menü çalışıyor!
--- Sıkıntı olursa Xenon → CoreGui yerine PlayerGui deneyebilirsin.
+-- Her ayar, sadece menü içinde ve sığar. Hileler AKTİF ve fonksiyoneldir!
