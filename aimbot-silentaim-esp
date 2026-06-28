@@ -1,6 +1,5 @@
-// ROBLOX LUA HİLESİ - AİMBOT, ESP, SİLENTAİM, MENÜLÜ (Tüm fonksiyonlar dolu)
+-- ROBLOX HİLESİ - AİMBOT, ESP, SİLENTAİM, MENÜLÜ
 
--- Servisler
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -9,41 +8,34 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
--- Hile ayarları
 local cheats = {
     Aimbot = false,
     ESP = false,
     SilentAim = false
 }
--- Menü pozisyonu
+
 local menu = {
     Visible = false,
     X = 450,
     Y = 200,
     Width = 270,
-    Height = 200
+    Height = 220
 }
 
--- Silentaima yardımcı değişkenler
 local aimTarget = nil
+local ESP_Instances = {}
 
------------------------------------
--- Anti-enemy (takım kontrolü)
-local function isEnemy(player)
+function isEnemy(player)
     if player == LocalPlayer then return false end
-    -- Team'li oyunlar için:
     if player.Team ~= nil and LocalPlayer.Team ~= nil then
         return player.Team ~= LocalPlayer.Team
     end
     return true
 end
 
------------------------------------
--- En yakın düşmanı bul
-local function getClosestEnemyToCursor()
+function getClosestEnemyToCursor()
     local shortest = math.huge
     local target = nil
-
     for _, player in ipairs(Players:GetPlayers()) do
         if isEnemy(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local pos, onscreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
@@ -59,32 +51,23 @@ local function getClosestEnemyToCursor()
     return target
 end
 
------------------------------------
--- Aimbot fonksiyonu
-local function doAimbot()
+function doAimbot()
     if not cheats.Aimbot then return end
-
     local target = getClosestEnemyToCursor()
     if not target then return end
-
     if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
         local root = target.Character.HumanoidRootPart
-        local rootPos = root.Position
         local camPos = Camera.CFrame.Position
-        local direction = (rootPos - camPos).Unit
-
+        local direction = (root.Position - camPos).Unit
         Camera.CFrame = CFrame.new(camPos, camPos + direction)
     end
 end
 
------------------------------------
--- SilentAim fonksiyonu
-local function doSilentAim()
-    if not cheats.SilentAim then return end
+function doSilentAim()
+    if not cheats.SilentAim then aimTarget = nil return end
     aimTarget = getClosestEnemyToCursor()
 end
 
--- Mouse'a hook
 local oldNamecall = nil
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
@@ -101,57 +84,38 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     return oldNamecall(self, ...)
 end)
 
------------------------------------
--- ESP Utility
-local ESP_Instances = {}
-
-local function removeESP()
+function removeESP()
     for _, v in pairs(ESP_Instances) do
-        if v and v.Remove then
-            v:Remove()
+        if v and v.Parent then
+            v:Destroy()
         end
     end
     ESP_Instances = {}
 end
 
-local function createESPForCharacter(char)
+function createESPForCharacter(char)
     if not char:FindFirstChild("HumanoidRootPart") then return end
-
-    -- Bacak ve vücudu kapsayacak kutu
     local root = char.HumanoidRootPart
-
-    local function makeBox()
-        local BillboardGui = Instance.new("BillboardGui")
-        BillboardGui.AlwaysOnTop = true
-        BillboardGui.Size = UDim2.new(0, 90, 0, 200)
-        BillboardGui.Adornee = root
-        BillboardGui.StudsOffset = Vector3.new(0, -2, 0)
-        BillboardGui.Parent = game:GetService("CoreGui")
-
-        local Box = Instance.new("Frame")
-        Box.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-        Box.BackgroundTransparency = 0.65
-        Box.Size = UDim2.new(1, 0, 1, 0)
-        Box.BorderSizePixel = 2
-        Box.BorderColor3 = Color3.fromRGB(255, 0, 0)
-        Box.Parent = BillboardGui
-
-        local obj = {}
-        function obj.Remove()
-            BillboardGui:Destroy()
-        end
-        return obj
-    end
-
-    table.insert(ESP_Instances, makeBox())
+    local gui = Instance.new("BillboardGui")
+    gui.AlwaysOnTop = true
+    gui.Size = UDim2.new(0, 80, 0, 180)
+    gui.Adornee = root
+    gui.Parent = game:GetService("CoreGui")
+    local rect = Instance.new("Frame")
+    rect.Size = UDim2.new(1,0,1,0)
+    rect.BackgroundTransparency = 0.5
+    rect.BackgroundColor3 = Color3.fromRGB(255,0,0)
+    rect.Parent = gui
+    rect.BorderColor3 = Color3.fromRGB(255,0,0)
+    rect.BorderSizePixel = 2
+    table.insert(ESP_Instances, gui)
 end
 
-local function updateESP()
+function updateESP()
     if not cheats.ESP then
         removeESP()
         return
     end
-
     removeESP()
     for _, player in ipairs(Players:GetPlayers()) do
         if isEnemy(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -169,67 +133,60 @@ Players.PlayerRemoving:Connect(function()
     updateESP()
 end)
 
------------------------------------
--- Hile menüsü (Simple Drawing)
-local Drawing = Drawing or nil
-if not Drawing then
-    -- Basic Drawing yerine Roblox GUI'leri ile menü yapılacak
-    local menuGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-    menuGui.Name = "HileMenu"
-    menuGui.ResetOnSpawn = false
+local menuGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
+menuGui.Name = "HileMenusu"
+menuGui.ResetOnSpawn = false
 
-    local bg = Instance.new("Frame", menuGui)
-    bg.Position = UDim2.new(0, menu.X, 0, menu.Y)
-    bg.Size = UDim2.new(0, menu.Width, 0, menu.Height)
-    bg.BackgroundColor3 = Color3.fromRGB(255,255,255)
-    bg.BorderColor3 = Color3.fromRGB(25,25,25)
-    bg.BorderSizePixel = 2
-    bg.Visible = false
+local bg = Instance.new("Frame", menuGui)
+bg.Position = UDim2.new(0, menu.X, 0, menu.Y)
+bg.Size = UDim2.new(0, menu.Width, 0, menu.Height)
+bg.BackgroundColor3 = Color3.fromRGB(255,255,255)
+bg.BorderColor3 = Color3.fromRGB(25,25,25)
+bg.BorderSizePixel = 2
+bg.Visible = false
 
-    local title = Instance.new("TextLabel", bg)
-    title.Text = "Roblox Hile Menüsü"
-    title.TextColor3 = Color3.fromRGB(0,0,0)
-    title.Size = UDim2.new(1,0,0,40)
-    title.Position = UDim2.new(0,0,0,0)
-    title.BackgroundTransparency = 1
-    title.Font = Enum.Font.SourceSansBold
-    title.TextScaled = true
+local title = Instance.new("TextLabel", bg)
+title.Text = "ROBLOX HİLE MENÜSÜ"
+title.TextColor3 = Color3.fromRGB(0,0,0)
+title.Size = UDim2.new(1,0,0,40)
+title.Position = UDim2.new(0,0,0,0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.SourceSansBold
+title.TextScaled = true
 
-    -- Seçenek butonları
-    local buttons = {}
-    local toggleOrder = {"Aimbot","ESP","SilentAim"}
-    for index, opt in ipairs(toggleOrder) do
-        local btn = Instance.new("TextButton", bg)
-        btn.Size = UDim2.new(1,-30,0,34)
-        btn.Position = UDim2.new(0,15,0,40+((index-1)*45))
-        btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
-        btn.BorderSizePixel = 0
-        btn.Text = opt
-        btn.Name = opt
-        btn.TextColor3 = Color3.fromRGB(255,255,255)
-        btn.Font = Enum.Font.SourceSansBold
-        btn.TextSize = 22
+local options = {"Aimbot","ESP","SilentAim"}
+local buttons = {}
 
-        btn.MouseButton1Click:Connect(function()
-            cheats[opt] = not cheats[opt]
-            if opt == "ESP" then
-                updateESP()
-            end
-            btn.BackgroundColor3 = cheats[opt] and Color3.fromRGB(60,60,60) or Color3.fromRGB(25,25,25)
-        end)
-        table.insert(buttons, btn)
-    end
-
-    -- Aç kapa tuşu
-    UserInputService.InputBegan:Connect(function(input, processed)
-        if not processed and input.KeyCode == Enum.KeyCode.Insert then
-            bg.Visible = not bg.Visible
+for i, opt in ipairs(options) do
+    local btn = Instance.new("TextButton", bg)
+    btn.Size = UDim2.new(1,-30,0,36)
+    btn.Position = UDim2.new(0,15,0,45+(i-1)*55)
+    btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    btn.BorderSizePixel = 0
+    btn.Text = opt
+    btn.Name = opt
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 21
+    btn.AutoButtonColor = false
+    btn.MouseButton1Click:Connect(function()
+        cheats[opt] = not cheats[opt]
+        btn.BackgroundColor3 = cheats[opt] and Color3.fromRGB(70,70,70) or Color3.fromRGB(30,30,30)
+        if opt == "ESP" then
+            updateESP()
         end
     end)
+    btn.BackgroundColor3 = cheats[opt] and Color3.fromRGB(70,70,70) or Color3.fromRGB(30,30,30)
+    buttons[opt] = btn
 end
 
------------------------------------
--- Per-frame güncellemeler
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.Insert then
+        menu.Visible = not menu.Visible
+        bg.Visible = menu.Visible
+    end
+end)
+
 RunService.RenderStepped:Connect(function()
     if cheats.Aimbot then
         doAimbot()
@@ -239,14 +196,6 @@ RunService.RenderStepped:Connect(function()
     else
         aimTarget = nil
     end
-    if cheats.ESP then
-        updateESP()
-    end
 end)
 
------------------------------------
--- Başlangıç mesajı
-print("[ROBLOX HİLESİ] Aimbot, ESP ve SilentAim etkin!")
-print("[MENÜ] Insert tuşuna basarak hile menüsünü aç/kapat.")
-
--- End of script
+updateESP()
