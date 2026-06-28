@@ -1,7 +1,7 @@
---// ADVANCED ROBLOX CHEAT SCRIPT WITH PROFESSIONAL MENU DESIGN (REMADE AS REQUESTED) //--
+--// ADVANCED ROBLOX CHEAT SCRIPT WITH PROFESSIONAL MENU DESIGN (PRO MENU - WHITE BG, BLACK BUTTONS, WHITE TEXT) //--
 
 --// CONFIG
-local menuKey = Enum.KeyCode.RightShift -- Menu toggle key
+local menuKey = Enum.KeyCode.RightShift
 
 --// SERVICES
 local Players = game:GetService("Players")
@@ -14,146 +14,153 @@ local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local menuOpen = false
 
--- Settings
+-- SETTINGS
 local settings = {
     Aimbot = false,
     ESP = false,
     SilentAim = false,
 }
 
---// UI CREATION (PROFESSIONAL MENU REDESIGN, WHITE BG, BLACK BUTTONS/WHITE TEXT)
-
-if game.CoreGui:FindFirstChild("PRO_MENU") then
-    game.CoreGui.PRO_MENU:Destroy()
-end
+--// MENU UI CREATION (Genuine Professional Menu, Always Visible Properly)
+pcall(function()
+    if game.CoreGui:FindFirstChild("PRO_MENU") then
+        game.CoreGui.PRO_MENU:Destroy()
+    end
+end)
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "PRO_MENU"
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-ScreenGui.Parent = game.CoreGui
+ScreenGui.Parent = (syn and syn.protect_gui and syn.protect_gui(game.CoreGui)) or game:GetService("CoreGui")
 
 local MenuFrame = Instance.new("Frame")
-MenuFrame.Size = UDim2.new(0, 295, 0, 246)
-MenuFrame.Position = UDim2.new(0.5, -147, 0.38, 0)
-MenuFrame.BackgroundColor3 = Color3.new(1, 1, 1) -- White background
+MenuFrame.Size = UDim2.new(0, 330, 0, 276)
+MenuFrame.Position = UDim2.new(0.5, -165, 0.36, 0)
+MenuFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 MenuFrame.BorderSizePixel = 0
 MenuFrame.Visible = false
 MenuFrame.AnchorPoint = Vector2.new(0, 0)
 MenuFrame.Parent = ScreenGui
-local uicorner = Instance.new("UICorner", MenuFrame)
-uicorner.CornerRadius = UDim.new(0,14)
+local roundMain = Instance.new("UICorner")
+roundMain.CornerRadius = UDim.new(0, 18)
+roundMain.Parent = MenuFrame
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1,0,0,44)
-Title.Position = UDim2.new(0,0,0,0)
-Title.BackgroundColor3 = Color3.new(0,0,0)
-Title.BackgroundTransparency = 0
-Title.BorderSizePixel = 0
-Title.Text = "Roblox Pro Menu"
-Title.Font = Enum.Font.GothamBold
-Title.TextColor3 = Color3.new(1,1,1)
-Title.TextSize = 26
-Title.Parent = MenuFrame
-local titleCorner = Instance.new("UICorner", Title)
-titleCorner.CornerRadius = UDim.new(0,10)
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 48)
+TopBar.Position = UDim2.new(0,0,0,0)
+TopBar.BackgroundColor3 = Color3.new(0, 0, 0)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MenuFrame
+local roundBar = Instance.new("UICorner")
+roundBar.CornerRadius = UDim.new(0, 12)
+roundBar.Parent = TopBar
 
-local yOffset = 59
-local optionPadding = 17
-local optionHeight = 40
-local toggleButtons = {}
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -28, 1, 0)
+TitleLabel.Position = UDim2.new(0, 15, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "Roblox Pro Menu"
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextColor3 = Color3.new(1,1,1)
+TitleLabel.TextSize = 28
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TopBar
 
-local function makeToggle(name, settingName, order)
+local yBase = 60
+local optionGap = 18
+local optionHeight = 42
+local toggles = {}
+
+local function makeToggle(txt, settingKey, order)
     local Toggle = Instance.new("TextButton")
-    Toggle.Name = name
-    Toggle.Text = name..": OFF"
+    Toggle.Name = txt .. "_Btn"
+    Toggle.Text = txt..": OFF"
     Toggle.Font = Enum.Font.GothamBold
-    Toggle.TextSize = 22
-    Toggle.Size = UDim2.new(0.92,0,0, optionHeight)
-    Toggle.Position = UDim2.new(0.04,0,0, yOffset + (order-1)*(optionHeight+optionPadding))
-    Toggle.BackgroundColor3 = Color3.new(0,0,0) -- Black button background
-    Toggle.TextColor3 = Color3.new(1,1,1) -- White text
+    Toggle.TextSize = 23
+    Toggle.Size = UDim2.new(0.92,0,0,optionHeight)
+    Toggle.Position = UDim2.new(0.04, 0, 0, yBase + (order-1)*(optionHeight+optionGap))
+    Toggle.BackgroundColor3 = Color3.new(0,0,0)
+    Toggle.TextColor3 = Color3.new(1,1,1)
     Toggle.AutoButtonColor = false
     Toggle.BorderSizePixel = 0
     Toggle.Parent = MenuFrame
-
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0,11)
-    btnCorner.Parent = Toggle
-
+    local roundT = Instance.new("UICorner")
+    roundT.CornerRadius = UDim.new(0,13)
+    roundT.Parent = Toggle
+    
     Toggle.MouseEnter:Connect(function()
-        Toggle.BackgroundColor3 = Color3.fromRGB(40,40,40)
+        Toggle.BackgroundColor3 = Color3.fromRGB(36,36,36)
     end)
     Toggle.MouseLeave:Connect(function()
         Toggle.BackgroundColor3 = Color3.new(0,0,0)
     end)
-
     Toggle.MouseButton1Click:Connect(function()
-        settings[settingName] = not settings[settingName]
-        Toggle.Text = name..": "..(settings[settingName] and "ON" or "OFF")
-        if name == "ESP" and not settings[settingName] then clearEsp() end
+        settings[settingKey] = not settings[settingKey]
+        Toggle.Text = txt..": "..(settings[settingKey] and "ON" or "OFF")
+        if txt == "ESP" and not settings[settingKey] then clearEsp() end
     end)
-    Toggle.Text = name..": OFF"
-    table.insert(toggleButtons, Toggle)
+    Toggle.Text = txt..": OFF"
+    table.insert(toggles, Toggle)
     return Toggle
 end
 
-local aimbotBtn = makeToggle("Aimbot", "Aimbot", 1)
-local espBtn = makeToggle("ESP", "ESP", 2)
-local silentBtn = makeToggle("SilentAim", "SilentAim", 3)
+local tAimbot = makeToggle("Aimbot", "Aimbot", 1)
+local tESP = makeToggle("ESP", "ESP", 2)
+local tSilent = makeToggle("SilentAim", "SilentAim", 3)
 
--- Info Footer
+-- Footer
 local Footer = Instance.new("TextLabel")
-Footer.Size = UDim2.new(1, 0, 0, 26)
-Footer.Position = UDim2.new(0,0,1,-26)
+Footer.Size = UDim2.new(1, 0, 0, 28)
+Footer.Position = UDim2.new(0, 0, 1, -28)
 Footer.BackgroundTransparency = 1
-Footer.Text = "Toggle: RightShift | @PRO LUA"
-Footer.Font = Enum.Font.Gotham
+Footer.Text = "Toggle Menu: RightShift   |   @PRO LUA"
 Footer.TextColor3 = Color3.fromRGB(100,100,100)
-Footer.TextSize = 17
+Footer.Font = Enum.Font.Gotham
+Footer.TextSize = 16
 Footer.Parent = MenuFrame
 
--- Dragging the menu
-local dragging, dragInput, dragStart, startPos
-MenuFrame.InputBegan:Connect(function(input)
+-- Make menu draggable
+local drag, dragInput, startDrag, startPos
+TopBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
+        drag = true
+        startDrag = input.Position
         startPos = MenuFrame.Position
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            if input.UserInputState == Enum.UserInputState.End then drag = false end
         end)
     end
 end)
-MenuFrame.InputChanged:Connect(function(input)
+TopBar.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement then
         dragInput = input
     end
 end)
 UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
+    if drag and input == dragInput then
+        local delta = input.Position - startDrag
         MenuFrame.Position = startPos + UDim2.new(0, delta.X, 0, delta.Y)
     end
 end)
 
---// MENU TOGGLE LOGIC
-UserInputService.InputBegan:Connect(function(input, gp)
+-- Menu toggle
+UserInputService.InputBegan:Connect(function(input,gp)
     if not gp and input.KeyCode == menuKey then
         menuOpen = not menuOpen
         MenuFrame.Visible = menuOpen
     end
 end)
 
---// AIMBOT FUNCTIONALITY (100% HİT, ASLA MERMİ KAÇIRMAZ)
+--// AIMBOT (Asla kendi takımına değil, asla ıskalama yok, daima başı hedefler)
 local function getClosestEnemyToMouse()
     local closest, dist = nil, math.huge
-    for _, player in ipairs(Players:GetPlayers()) do
+    for _,player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Team ~= LocalPlayer.Team and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local head = player.Character.Head
-            local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+            local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
             if onScreen then
-                local mouseDist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
-                if mouseDist < dist and mouseDist <= 240 then -- Geniş FOV ve asla kaçırmaz
+                local mouseDist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+                if mouseDist < dist and mouseDist <= 250 then
                     closest, dist = head, mouseDist
                 end
             end
@@ -162,23 +169,21 @@ local function getClosestEnemyToMouse()
     return closest
 end
 
--- Doğrudan fare konumunu atlatıcı, %100 HİT
 local function aimAt(target)
     if not target then return end
     local pos = Camera:WorldToViewportPoint(target.Position)
-    -- Since we want to always hit, move instantly & exactly to head
     mousemoverel(pos.X - Mouse.X, pos.Y - Mouse.Y)
 end
 
---// ESP (HİÇ BOZULMAYAN, ROBLOX KARAKTERİNİN MODELİYLE BIREBIR, BEYAZ KUTU & KAFAYA YUVARLAK & VÜCUT İSKELET)
+--// ESP (beyaz kutu, beyaz kafaya tam yuvarlak, iskelet tamam, bozulmaz!)
 local espObjects = {}
 
-local function clearEsp()
-    for _, tbl in ipairs(espObjects) do
-        if tbl.Box then pcall(function() tbl.Box:Remove() end) end
-        if tbl.Head then pcall(function() tbl.Head:Remove() end) end
-        if tbl.Skeleton then
-            for _,line in pairs(tbl.Skeleton) do
+function clearEsp()
+    for _, obj in ipairs(espObjects) do
+        if obj.Box then pcall(function() obj.Box:Remove() end) end
+        if obj.Head then pcall(function() obj.Head:Remove() end) end
+        if obj.Skeleton then
+            for _,line in ipairs(obj.Skeleton) do
                 pcall(function() line:Remove() end)
             end
         end
@@ -186,43 +191,43 @@ local function clearEsp()
     espObjects = {}
 end
 
-local function drawLine()
-    local line = Drawing.new("Line")
-    line.Color = Color3.new(1,1,1)
-    line.Thickness = 2
-    line.Transparency = 1
-    line.Visible = true
-    return line
+local function DLine()
+    local l = Drawing.new("Line")
+    l.Color = Color3.new(1,1,1)
+    l.Thickness = 2
+    l.Transparency = 1
+    l.Visible = true
+    return l
 end
-local function drawBox()
-    local box = Drawing.new("Square")
-    box.Color = Color3.new(1,1,1)
-    box.Thickness = 2
-    box.Transparency = 1
-    box.Filled = false
-    box.Visible = true
-    return box
+local function DBox()
+    local b = Drawing.new("Square")
+    b.Color = Color3.new(1,1,1)
+    b.Thickness = 2
+    b.Transparency = 1
+    b.Filled = false
+    b.Visible = true
+    return b
 end
-local function drawCircle()
-    local circ = Drawing.new("Circle")
-    circ.Color = Color3.new(1,1,1)
-    circ.Thickness = 2
-    circ.NumSides = 24
-    circ.Transparency = 1
-    circ.Filled = false
-    circ.Visible = true
-    return circ
+local function DCircle()
+    local c = Drawing.new("Circle")
+    c.Color = Color3.new(1,1,1)
+    c.Thickness = 2
+    c.NumSides = 22
+    c.Transparency = 1
+    c.Filled = false
+    c.Visible = true
+    return c
 end
 
-local function getBodyParts(char)
+local function getParts(chr)
     return {
-        Head = char:FindFirstChild("Head"),
-        Root = char:FindFirstChild("HumanoidRootPart"),
-        UpperTorso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso"),
-        LeftArm = char:FindFirstChild("LeftUpperArm") or char:FindFirstChild("Left Arm") or char:FindFirstChild("LeftHand"),
-        RightArm = char:FindFirstChild("RightUpperArm") or char:FindFirstChild("Right Arm") or char:FindFirstChild("RightHand"),
-        LeftLeg = char:FindFirstChild("LeftUpperLeg") or char:FindFirstChild("Left Leg") or char:FindFirstChild("LeftFoot"),
-        RightLeg = char:FindFirstChild("RightUpperLeg") or char:FindFirstChild("Right Leg") or char:FindFirstChild("RightFoot"),
+        Head = chr:FindFirstChild("Head"),
+        Root = chr:FindFirstChild("HumanoidRootPart"),
+        UpperTorso = chr:FindFirstChild("UpperTorso") or chr:FindFirstChild("Torso"),
+        LeftArm = chr:FindFirstChild("LeftUpperArm") or chr:FindFirstChild("Left Arm") or chr:FindFirstChild("LeftHand"),
+        RightArm = chr:FindFirstChild("RightUpperArm") or chr:FindFirstChild("Right Arm") or chr:FindFirstChild("RightHand"),
+        LeftLeg = chr:FindFirstChild("LeftUpperLeg") or chr:FindFirstChild("Left Leg") or chr:FindFirstChild("LeftFoot"),
+        RightLeg = chr:FindFirstChild("RightUpperLeg") or chr:FindFirstChild("Right Leg") or chr:FindFirstChild("RightFoot"),
     }
 end
 
@@ -231,95 +236,91 @@ local function renderEsp()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Team ~= LocalPlayer.Team and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local char = player.Character
-            local parts = getBodyParts(char)
+            local parts = getParts(char)
             if not parts.Head or not parts.Root then continue end
 
-            -- Kutu koordinatları
-            local points = {}
             local minX, minY = math.huge, math.huge
             local maxX, maxY = -math.huge, -math.huge
+            local points = {}
             for _, v in pairs(parts) do
                 if v then
-                    local pos, vis = Camera:WorldToViewportPoint(v.Position)
-                    if vis then
+                    local pos, onscr = Camera:WorldToViewportPoint(v.Position)
+                    if onscr then
                         table.insert(points, pos)
-                        minX = math.min(minX, pos.X)
-                        minY = math.min(minY, pos.Y)
-                        maxX = math.max(maxX, pos.X)
-                        maxY = math.max(maxY, pos.Y)
+                        minX, minY = math.min(minX,pos.X), math.min(minY,pos.Y)
+                        maxX, maxY = math.max(maxX,pos.X), math.max(maxY,pos.Y)
                     end
                 end
             end
-
             if #points >= 2 then
-                -- Kutunun tam karaktere uyacak şekilde ayarlanması!
-                local box = drawBox()
-                box.Position = Vector2.new(minX, minY)
-                box.Size = Vector2.new(maxX-minX, maxY-minY)
-                box.Visible = true
+                local b = DBox()
+                b.Position = Vector2.new(minX, minY)
+                b.Size = Vector2.new(maxX-minX, maxY-minY)
+                b.Visible = true
 
-                -- Kafaya tam oturan yuvarlak
-                local headPos, headOnScreen = Camera:WorldToViewportPoint(parts.Head.Position)
-                local circ = drawCircle()
-                circ.Position = Vector2.new(headPos.X, headPos.Y)
-                circ.Radius = math.clamp((maxX-minX)/7,13,36)
-                circ.Visible = true
+                local headP, _ = Camera:WorldToViewportPoint(parts.Head.Position)
+                local c = DCircle()
+                c.Position = Vector2.new(headP.X, headP.Y)
+                c.Radius = math.clamp((maxX-minX)/7, 13, 38)
+                c.Visible = true
 
-                -- İskelet çizimi
-                local skeleton = {}
+                local skel = {}
+                -- Neck
                 if parts.Head and parts.Root then
-                    local headP = Camera:WorldToViewportPoint(parts.Head.Position)
-                    local rootP = Camera:WorldToViewportPoint(parts.Root.Position)
-                    local neck = drawLine()
-                    neck.From = Vector2.new(headP.X, headP.Y + circ.Radius)
-                    neck.To = Vector2.new(rootP.X, rootP.Y)
-                    table.insert(skeleton, neck)
+                    local head2d = Camera:WorldToViewportPoint(parts.Head.Position)
+                    local root2d = Camera:WorldToViewportPoint(parts.Root.Position)
+                    local n = DLine()
+                    n.From = Vector2.new(head2d.X, head2d.Y+c.Radius)
+                    n.To = Vector2.new(root2d.X, root2d.Y)
+                    table.insert(skel, n)
                 end
+                -- Arms
                 if parts.UpperTorso and parts.LeftArm then
-                    local torsoP = Camera:WorldToViewportPoint(parts.UpperTorso.Position)
-                    local lArmP = Camera:WorldToViewportPoint(parts.LeftArm.Position)
-                    local lArm = drawLine()
-                    lArm.From = Vector2.new(torsoP.X, torsoP.Y)
-                    lArm.To = Vector2.new(lArmP.X, lArmP.Y)
-                    table.insert(skeleton, lArm)
+                    local uc2d = Camera:WorldToViewportPoint(parts.UpperTorso.Position)
+                    local la2d = Camera:WorldToViewportPoint(parts.LeftArm.Position)
+                    local ll = DLine()
+                    ll.From = Vector2.new(uc2d.X, uc2d.Y)
+                    ll.To = Vector2.new(la2d.X, la2d.Y)
+                    table.insert(skel, ll)
                 end
                 if parts.UpperTorso and parts.RightArm then
-                    local torsoP = Camera:WorldToViewportPoint(parts.UpperTorso.Position)
-                    local rArmP = Camera:WorldToViewportPoint(parts.RightArm.Position)
-                    local rArm = drawLine()
-                    rArm.From = Vector2.new(torsoP.X, torsoP.Y)
-                    rArm.To = Vector2.new(rArmP.X, rArmP.Y)
-                    table.insert(skeleton, rArm)
+                    local uc2d = Camera:WorldToViewportPoint(parts.UpperTorso.Position)
+                    local ra2d = Camera:WorldToViewportPoint(parts.RightArm.Position)
+                    local rl = DLine()
+                    rl.From = Vector2.new(uc2d.X, uc2d.Y)
+                    rl.To = Vector2.new(ra2d.X, ra2d.Y)
+                    table.insert(skel, rl)
                 end
+                -- Legs
                 if parts.Root and parts.LeftLeg then
-                    local rootP = Camera:WorldToViewportPoint(parts.Root.Position)
-                    local lLegP = Camera:WorldToViewportPoint(parts.LeftLeg.Position)
-                    local lLeg = drawLine()
-                    lLeg.From = Vector2.new(rootP.X, rootP.Y)
-                    lLeg.To = Vector2.new(lLegP.X, lLegP.Y)
-                    table.insert(skeleton, lLeg)
+                    local root2d = Camera:WorldToViewportPoint(parts.Root.Position)
+                    local ll2d = Camera:WorldToViewportPoint(parts.LeftLeg.Position)
+                    local legL = DLine()
+                    legL.From = Vector2.new(root2d.X, root2d.Y)
+                    legL.To = Vector2.new(ll2d.X, ll2d.Y)
+                    table.insert(skel, legL)
                 end
                 if parts.Root and parts.RightLeg then
-                    local rootP = Camera:WorldToViewportPoint(parts.Root.Position)
-                    local rLegP = Camera:WorldToViewportPoint(parts.RightLeg.Position)
-                    local rLeg = drawLine()
-                    rLeg.From = Vector2.new(rootP.X, rootP.Y)
-                    rLeg.To = Vector2.new(rLegP.X, rLegP.Y)
-                    table.insert(skeleton, rLeg)
+                    local root2d = Camera:WorldToViewportPoint(parts.Root.Position)
+                    local rl2d = Camera:WorldToViewportPoint(parts.RightLeg.Position)
+                    local legR = DLine()
+                    legR.From = Vector2.new(root2d.X, root2d.Y)
+                    legR.To = Vector2.new(rl2d.X, rl2d.Y)
+                    table.insert(skel, legR)
                 end
 
-                table.insert(espObjects, {Box=box, Head=circ, Skeleton=skeleton})
+                table.insert(espObjects, {Box=b, Head=c, Skeleton=skel})
             end
         end
     end
 end
 
---// SILENTAIM FUNCTIONALITY
+--// SILENTAIM 
 local silentTarget = nil
-local oldNamecall = nil
+local oldNM = nil
 local mt = getrawmetatable(game)
-setreadonly(mt,false)
-oldNamecall = mt.__namecall
+setreadonly(mt, false)
+oldNM = mt.__namecall
 mt.__namecall = newcclosure(function(self, ...)
     local args = {...}
     local method = getnamecallmethod and getnamecallmethod() or ""
@@ -327,15 +328,15 @@ mt.__namecall = newcclosure(function(self, ...)
         if tostring(self):lower():find("hit") or tostring(self):lower():find("bullet") or tostring(self):lower():find("shoot") then
             if silentTarget and silentTarget.Parent then
                 args[1] = silentTarget
-                return oldNamecall(self, unpack(args))
+                return oldNM(self, unpack(args))
             end
         end
     end
-    return oldNamecall(self, ...)
+    return oldNM(self, ...)
 end)
-setreadonly(mt,true)
+setreadonly(mt, true)
 
---// MAIN RENDER/UPDATE LOOP
+--// MAIN RENDER/UPDATE
 RunService.RenderStepped:Connect(function()
     -- Aimbot
     if settings.Aimbot then
