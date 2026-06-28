@@ -11,11 +11,7 @@ local cheats = {
 }
 
 local menuOpen = false
-local menuPos = Vector2.new(300, 180)
-local menuSize = Vector2.new(300, 235)
-local dragging = false
-local dragOffset = Vector2.new()
-local espBoxes = {}
+local menuFrame = nil
 
 local function isEnemy(player)
     if player == LP then return false end
@@ -66,6 +62,7 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     return oldNamecall(self, ...)
 end)
 
+local espBoxes = {}
 local function clearESP()
     for _, v in pairs(espBoxes) do
         if v and v.Parent then v:Destroy() end
@@ -127,115 +124,98 @@ Players.PlayerRemoving:Connect(function()
     updateESP()
 end)
 
+if game:GetService("CoreGui"):FindFirstChild("geneMenu") then
+    game:GetService("CoreGui"):FindFirstChild("geneMenu"):Destroy()
+end
 local gui = Instance.new("ScreenGui")
-gui.Name = "gene"
+gui.Name = "geneMenu"
 gui.Parent = game:GetService("CoreGui")
 gui.ResetOnSpawn = false
 
-local bg = Instance.new("Frame")
-bg.Name = "geneContainer"
-bg.Parent = gui
-bg.Size = UDim2.new(0, menuSize.X, 0, menuSize.Y)
-bg.Position = UDim2.new(0, menuPos.X, 0, menuPos.Y)
-bg.BackgroundColor3 = Color3.fromRGB(255,255,255)
-bg.BorderSizePixel = 2
-bg.BorderColor3 = Color3.fromRGB(0,0,0)
-bg.Visible = menuOpen
-bg.Active = true
+local menuWidth, menuHeight = 310, 240
+menuFrame = Instance.new("Frame")
+menuFrame.Name = "geneMenuFrame"
+menuFrame.Parent = gui
+menuFrame.AnchorPoint = Vector2.new(0.5,0.5)
+menuFrame.Position = UDim2.new(0.5,0,0.5,0)
+menuFrame.Size = UDim2.new(0, menuWidth, 0, menuHeight)
+menuFrame.BackgroundColor3 = Color3.fromRGB(255,255,255)
+menuFrame.BorderSizePixel = 0
+menuFrame.Visible = menuOpen
+menuFrame.Active = true
+menuFrame.Draggable = true
 
-local topBar = Instance.new("Frame", bg)
-topBar.Size = UDim2.new(1,0,0,35)
-topBar.Position = UDim2.new(0,0,0,0)
-topBar.BackgroundColor3 = Color3.fromRGB(40,40,40)
+local headerBar = Instance.new("Frame", menuFrame)
+headerBar.Size = UDim2.new(1,0,0,38)
+headerBar.Position = UDim2.new(0,0,0,0)
+headerBar.BackgroundColor3 = Color3.fromRGB(40,40,40)
 
-local title = Instance.new("TextLabel")
-title.Parent = topBar
-title.Position = UDim2.new(0,0,0,0)
-title.Size = UDim2.new(1,0,1,0)
-title.Text = "GENE"
-title.Font = Enum.Font.SourceSansBold
-title.TextColor3 = Color3.fromRGB(255,255,255)
-title.TextScaled = true
-title.BackgroundTransparency = 1
+local menuTitle = Instance.new("TextLabel")
+menuTitle.Parent = headerBar
+menuTitle.Size = UDim2.new(1,0,1,0)
+menuTitle.Position = UDim2.new(0,0,0,0)
+menuTitle.Text = "GENE"
+menuTitle.TextColor3 = Color3.fromRGB(255,255,255)
+menuTitle.Font = Enum.Font.SourceSansBold
+menuTitle.TextSize = 29
+menuTitle.BackgroundTransparency = 1
 
-local optionHeight = 48
-local optionPad = 14
-
-local options = {"Aimbot", "ESP", "SilentAim"}
-local optionDescs = {
-    Aimbot = "Sadece düşmana kilitlenir",
-    ESP = "Kırmızı çizgi vücut-bacak",
-    SilentAim = "Susturulmuş otomatik nişan"
-}
-local currY = 38
-local buttons = {}
-
-local function updateMenuBtn(btn, enabled)
-    if enabled then
-        btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    else
-        btn.BackgroundColor3 = Color3.fromRGB(15,15,15)
-    end
-end
-
-for _, v in ipairs(options) do
+local function createOption(name, def, y, desc)
     local btn = Instance.new("TextButton")
-    btn.Parent = bg
-    btn.Name = v.."Btn"
-    btn.Size = UDim2.new(0.75,0,0,optionHeight-10)
-    btn.Position = UDim2.new(0.13,0,0, currY)
-    btn.BackgroundColor3 = Color3.fromRGB(15,15,15)
-    btn.Text = v
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 22
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Parent = menuFrame
+    btn.Position = UDim2.new(0,21,0, y)
+    btn.Size = UDim2.new(0, menuWidth-42, 0, 46)
+    btn.BackgroundColor3 = cheats[name] and Color3.fromRGB(40,40,40) or Color3.fromRGB(10,10,10)
     btn.BorderSizePixel = 0
-    local desc = Instance.new("TextLabel", bg)
-    desc.Size = UDim2.new(1, -45, 0, 16)
-    desc.Position = UDim2.new(0.14,0,0,currY + 32)
-    desc.Text = optionDescs[v]
-    desc.TextColor3 = Color3.fromRGB(0,0,0)
-    desc.Font = Enum.Font.SourceSans
-    desc.TextSize = 16
-    desc.BackgroundTransparency = 1
-    desc.ZIndex = 2
-    desc.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Text = ""
+    local lbl = Instance.new("TextLabel", btn)
+    lbl.Size = UDim2.new(1,0,1,0)
+    lbl.Position = UDim2.new(0,0,0,0)
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3 = Color3.fromRGB(255,255,255)
+    lbl.Font = Enum.Font.SourceSansBold
+    lbl.TextSize = 22
+    lbl.Text = name
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextStrokeTransparency = 0.7
+
+    local descL = Instance.new("TextLabel", btn)
+    descL.Size = UDim2.new(1,0,0,19)
+    descL.Position = UDim2.new(0,0,1,-19)
+    descL.BackgroundTransparency = 1
+    descL.TextColor3 = Color3.fromRGB(200,200,200)
+    descL.Font = Enum.Font.SourceSans
+    descL.TextSize = 14
+    descL.Text = desc
+    descL.TextXAlignment = Enum.TextXAlignment.Left
+
     btn.MouseButton1Click:Connect(function()
-        cheats[v] = not cheats[v]
-        updateMenuBtn(btn, cheats[v])
-        if v == "ESP" then
-            updateESP()
-        end
+        cheats[name] = not cheats[name]
+        btn.BackgroundColor3 = cheats[name] and Color3.fromRGB(40,40,40) or Color3.fromRGB(10,10,10)
+        if name == "ESP" then updateESP() end
     end)
-    updateMenuBtn(btn, cheats[v])
-    buttons[v] = btn
-    currY = currY + optionHeight
 end
 
-UIS.InputBegan:Connect(function(input,gpe)
+createOption("Aimbot", false, 50, "Sadece dusmanlara otomatik kilitliyor")
+createOption("ESP", false, 107, "Kırmızı vücut-bacak kutuları (her zaman doğru boyut)")
+createOption("SilentAim", false, 164, "Dusmanlara sessiz nişan" )
+
+local infoLbl = Instance.new("TextLabel", menuFrame)
+infoLbl.Size = UDim2.new(1,0,0,23)
+infoLbl.Position = UDim2.new(0,0,1,-23)
+infoLbl.BackgroundTransparency = 1
+infoLbl.TextColor3 = Color3.fromRGB(40,40,40)
+infoLbl.Font = Enum.Font.SourceSansItalic
+infoLbl.TextSize = 15
+infoLbl.Text = "Menü: Insert ile aç/kapat"
+
+UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.Insert then
         menuOpen = not menuOpen
-        bg.Visible = menuOpen
-    end
-end)
-
-topBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragOffset = Vector2.new(UIS:GetMouseLocation().X, UIS:GetMouseLocation().Y) - Vector2.new(bg.Position.X.Offset, bg.Position.Y.Offset)
-    end
-end)
-topBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local mouseLoc = UIS:GetMouseLocation()
-        bg.Position = UDim2.new(0, mouseLoc.X - dragOffset.X, 0, mouseLoc.Y - dragOffset.Y)
+        if menuFrame and menuFrame.Parent then
+            menuFrame.Visible = menuOpen
+        end
     end
 end)
 
