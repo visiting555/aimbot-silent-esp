@@ -311,7 +311,7 @@ local function getClosestEnemyToMouse()
             local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
             if onScreen then
                 local dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
-                if dist < minDist and dist <= 1000 then -- make big for max aimbot range
+                if dist < minDist then
                     closest = head
                     minDist = dist
                 end
@@ -323,14 +323,14 @@ end
 
 local function moveMouseTo(dx, dy)
     -- best supports for all popular executors
-    if writeclipboard and (isrbxactive and isrbxactive() or true) then
-        -- fake movement using VirtualInputManager if possible
-        local vim = game:GetService("VirtualInputManager")
-        vim:SendMouseMove(Mouse.X+dx, Mouse.Y+dy)
-    elseif type(mousemoverel) == "function" then
+    if type(mousemoverel) == "function" then
         mousemoverel(dx, dy)
     elseif type(mouse_event) == "function" then
         mouse_event(1, dx, dy, 0, 0)
+    elseif writeclipboard and (isrbxactive and isrbxactive() or true) then
+        -- fallback virtual input movement
+        local vim = game:GetService("VirtualInputManager")
+        vim:SendMouseMove(Mouse.X+dx, Mouse.Y+dy)
     end
 end
 
@@ -368,18 +368,18 @@ do
 end
 
 RunService.RenderStepped:Connect(function()
+    -- ESP
+    if settings.ESP then
+        renderEsp()
+    else
+        clearEsp()
+    end
     -- Aimbot
     if settings.Aimbot then
         local target = getClosestEnemyToMouse()
         if target and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             aimAt(target)
         end
-    end
-    -- ESP
-    if settings.ESP then
-        renderEsp()
-    else
-        clearEsp()
     end
     -- SilentAim
     if settings.SilentAim then
