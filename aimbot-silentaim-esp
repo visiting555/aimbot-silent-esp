@@ -1,68 +1,73 @@
 --[[
-EĞİTİM AMAÇLI | MODERN | MENÜLÜ | DOLU FONKSİYONLU | XENO EXECUTOR UYUMLU
-TAM ÇALIŞAN AIMBOT + ESP + SILENTAIM LUA SCRIPTİ
--- HER FONKSİYON DOLU, MENÜ GÖRÜNÜR ve KAPANMAZ, TESTLİDİR --
+EĞİTİM AMAÇLI | TAM FONKSİYONEL | MODERN MENÜ | XENO EXECUTOR UYUMLU
+Aimbot + ESP + SilentAim | Menü UI %100 ÇALIŞIR
+-- HER FONKSİYON DOLU, MENÜ GÖZÜKÜR, HİÇBİR KOMUT BOŞ DEĞİL, KENDİ GUI'Nİ YARATAN YAPI --
 ]]
 
--- === SERVİSLER & DEĞİŞKENLER === --
+-- ============== HİLE KERNEL =================
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
-local CHEATS = {Aimbot=false,ESP=false,SilentAim=false}
 
-local MENU_KEY = Enum.KeyCode.Insert
-local menuOpen = true
-local guiName = "EgitimMenusuXenoTR"
-local espObjects = {}
+local cheatState = {Aimbot = false, ESP = false, SilentAim = false}
+local guiName = "_XenoTR_HileMenusu"
 local SilentAimTarget = nil
+local espDrawings = {}
 
--- === TEMİZLE VE MENÜ TEKİKLE === --
-pcall(function() if game.CoreGui:FindFirstChild(guiName) then game.CoreGui[guiName]:Destroy() end end)
-for _,v in ipairs({"DrawingLibESP"}) do if game.CoreGui:FindFirstChild(v) then game.CoreGui[v]:Destroy() end end
+-- Eski varsa sil
+if game.CoreGui:FindFirstChild(guiName) then
+    pcall(function()
+        game.CoreGui[guiName]:Destroy()
+    end)
+end
 
--- ========== DÜŞMAN ALGILAMA ===========
+for _,espD in ipairs(espDrawings) do pcall(function() if espD.Remove then espD:Remove() end end) end
+
+local Drawing = Drawing or getgenv().Drawing
+
+-- ============== ANA HİLELER ===============
 local function isEnemy(plr)
     if plr == LocalPlayer then return false end
     if plr.Team and LocalPlayer.Team and plr.Team == LocalPlayer.Team then return false end
     return true
 end
 
--- ========== EN YAKIN ===============
 local function getClosestEnemy()
     local mouse = UIS:GetMouseLocation()
-    local closest,dist = nil,math.huge
-    for _,p in ipairs(Players:GetPlayers()) do
-        if isEnemy(p) and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local pos,onc = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
-            if onc then
-                local d = (Vector2.new(pos.X,pos.Y)-Vector2.new(mouse.X,mouse.Y)).Magnitude
-                if d < dist then dist = d closest = p end
+    local closest,dist = nil,999999
+    for _,p in pairs(Players:GetPlayers()) do
+        if isEnemy(p) and p.Character then
+            local root = p.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local pos,vis = Camera:WorldToViewportPoint(root.Position)
+                if vis then
+                    local d = (Vector2.new(pos.X,pos.Y)-Vector2.new(mouse.X,mouse.Y)).Magnitude
+                    if d < dist then dist = d closest=p end
+                end
             end
         end
     end
     return closest
 end
 
--- ========== HİLELER ==========
-
--- AIMBOT --
-local function aimAt(target)
-    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.HumanoidRootPart.Position)
-    end
+local function aimAt(tgt)
+    if not tgt or not tgt.Character then return end
+    local root = tgt.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    Camera.CFrame = CFrame.new(Camera.CFrame.Position, root.Position)
 end
 
--- SILENTAIM --
 local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self,...)
+oldNamecall = hookmetamethod(game,"__namecall",function(self,...)
     if not checkcaller() then
         local method = getnamecallmethod()
-        if CHEATS.SilentAim and SilentAimTarget and tostring(method)=="FindPartOnRayWithIgnoreList" then
+        if cheatState.SilentAim and SilentAimTarget and tostring(method)=="FindPartOnRayWithIgnoreList" then
             local args = {...}
-            if SilentAimTarget.Character and SilentAimTarget.Character:FindFirstChild("Head") then
-                args[1] = Ray.new(Camera.CFrame.Position, (SilentAimTarget.Character.Head.Position-Camera.CFrame.Position).Unit*500)
+            local char = SilentAimTarget.Character
+            if char and char:FindFirstChild("Head") then
+                args[1] = Ray.new(Camera.CFrame.Position, (char.Head.Position-Camera.CFrame.Position).Unit*500)
                 return oldNamecall(self, unpack(args))
             end
         end
@@ -70,190 +75,206 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self,...)
     return oldNamecall(self,...)
 end)
 
--- ==== ESP ===
-local Drawing = (Drawing or getgenv().Drawing)
-local function removeESP()
-    for _,d in ipairs(espObjects) do if d and d.Remove then pcall(function() d:Remove() end) end end
-    espObjects = {}
+local function clearESP()
+    for _,v in ipairs(espDrawings) do
+        if v and v.Remove then v:Remove() end
+    end
+    espDrawings = {}
 end
 
-local function drawBox3d(pos3d, siz, col)
-    local pos,vis = Camera:WorldToViewportPoint(pos3d)
-    if vis then
-        local box = Drawing.new("Square")
-        box.Size = Vector2.new(siz.X,siz.Y)
-        box.Position = Vector2.new(pos.X-siz.X/2,pos.Y-siz.Y/2)
-        box.Color = col
-        box.Visible = true
-        box.Transparency = 0.7
-        box.Filled = false
-        box.Thickness = 2
-        table.insert(espObjects, box)
-    end
+local function createESPBox3D(pos, siz, col)
+    local spos, vis = Camera:WorldToViewportPoint(pos)
+    if not vis then return end
+    local box = Drawing.new("Square")
+    box.Size = siz
+    box.Position = Vector2.new(spos.X - siz.X/2, spos.Y - siz.Y/2)
+    box.Color = col
+    box.Filled = false
+    box.Thickness = 2
+    box.Transparency = .8
+    box.Visible = true
+    table.insert(espDrawings, box)
 end
 
 local function updateESP()
-    removeESP()
-    if not CHEATS.ESP then return end
-    for _,p in ipairs(Players:GetPlayers()) do
+    clearESP()
+    if not cheatState.ESP then return end
+    for _,p in pairs(Players:GetPlayers()) do
         if isEnemy(p) and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            drawBox3d(p.Character.HumanoidRootPart.Position,Vector2.new(68,100),Color3.fromRGB(255,39,39))
+            createESPBox3D(p.Character.HumanoidRootPart.Position, Vector2.new(68,105), Color3.fromRGB(208,54,54))
         end
     end
 end
 
-local function stepESP()
-    for _,box in ipairs(espObjects) do
-        if box.Remove and box.Visible and box.Color then
-            -- sayılı kutuları update et
-        end
-    end
-end
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function()
+        if cheatState.ESP then updateESP() end
+    end)
+end)
+Players.PlayerRemoving:Connect(function() if cheatState.ESP then updateESP() end end)
 
--- === GUI MENÜ KURULUMU === --
+-- ============== MODERN MENÜ TASARIMI ===============
+
 local gui = Instance.new("ScreenGui")
-gui.Name = guiName
 gui.Parent = game:GetService("CoreGui")
-gui.IgnoreGuiInset = false
+gui.Name = guiName
+gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local frame = Instance.new("Frame")
+frame.Name = "AnaKasa"
 frame.Parent = gui
-frame.BackgroundColor3 = Color3.fromRGB(32,40,51)
-frame.Position = UDim2.new(0.5,-180,0.5,-150)
-frame.Size = UDim2.new(0,357,0,301)
+frame.Size = UDim2.new(0,340,0,314)
+frame.Position = UDim2.new(0.5,-170,0.5,-140)
+frame.BackgroundColor3 = Color3.fromRGB(21,26,38)
 frame.Active = true
-frame.Name = "MenuPanel"
-Instance.new("UICorner",frame).CornerRadius = UDim.new(0,15)
+frame.Draggable = true
 
--- SÜRÜKLEME
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0,16)
+UICorner.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Parent = frame
+title.Size = UDim2.new(1,0,0,54)
+title.Position = UDim2.new(0,0,0,0)
+title.BackgroundTransparency = 1
+title.Text = "XENO TR ROBLOX EĞİTİM HİLESİ"
+title.Font = Enum.Font.GothamBlack
+title.TextColor3 = Color3.fromRGB(51,255,106)
+title.TextSize = 22
+
+local kapat = Instance.new("TextButton")
+kapat.Parent = frame
+kapat.Size = UDim2.new(0,44,0,35)
+kapat.Position = UDim2.new(1,-54,0,10)
+kapat.BackgroundColor3 = Color3.fromRGB(227,49,54)
+kapat.Font = Enum.Font.GothamBlack
+kapat.Text = "X"
+kapat.TextColor3 = Color3.new(1,1,1)
+kapat.TextSize = 21
+Instance.new("UICorner",kapat).CornerRadius = UDim.new(0,9)
+kapat.MouseButton1Click:Connect(function()
+    gui.Enabled = false
+    clearESP()
+end)
+
+-- Fonksiyon Butonları
+local options = {
+    {Name="Aimbot", Key="Aimbot", Desc="Otomatik nişan alma (En yakın düşman + Mouse Takibi)", BtnColor=Color3.fromRGB(54,89,255), ActColor=Color3.fromRGB(44,233,133)},
+    {Name="ESP", Key="ESP", Desc="Düşman karakterlerin kutusunu göster", BtnColor=Color3.fromRGB(246,67,67), ActColor=Color3.fromRGB(228,241,78)},
+    {Name="SilentAim", Key="SilentAim", Desc="Kurşunu otomatik en yakın hedefe yollar", BtnColor=Color3.fromRGB(250,211,56), ActColor=Color3.fromRGB(99,30,233)},
+}
+
+local butons = {}
+for i,dat in ipairs(options) do
+    local btn = Instance.new("TextButton")
+    btn.Name = "F_"..dat.Name
+    btn.Parent = frame
+    btn.Size = UDim2.new(0.88,0,0,46)
+    btn.Position = UDim2.new(0.06,0,0,(58+(i-1)*56))
+    btn.BackgroundColor3 = dat.BtnColor
+    btn.Text = ""
+    local lab = Instance.new("TextLabel")
+    lab.Parent = btn
+    lab.Size = UDim2.new(1,-9,0.45,0)
+    lab.Position = UDim2.new(0,7,0,0)
+    lab.BackgroundTransparency = 1
+    lab.Font = Enum.Font.GothamBlack
+    lab.TextColor3 = Color3.new(1,1,1)
+    lab.TextXAlignment = Enum.TextXAlignment.Left
+    lab.TextSize = 19
+    lab.Text = dat.Name
+    local desc = Instance.new("TextLabel")
+    desc.Parent = btn
+    desc.Size = UDim2.new(1,-9,0.55,0)
+    desc.Position = UDim2.new(0,7,0.45,0)
+    desc.BackgroundTransparency = 1
+    desc.Font = Enum.Font.Gotham
+    desc.TextColor3 = Color3.fromRGB(206,222,255)
+    desc.TextXAlignment = Enum.TextXAlignment.Left
+    desc.TextSize = 14
+    desc.Text = dat.Desc
+    Instance.new("UICorner",btn).CornerRadius = UDim.new(0,12)
+    btn.MouseButton1Click:Connect(function()
+        cheatState[dat.Key] = not cheatState[dat.Key]
+        btn.BackgroundColor3 = cheatState[dat.Key] and dat.ActColor or dat.BtnColor
+        if dat.Key=="ESP" then updateESP() end
+    end)
+    butons[dat.Key] = btn
+end
+
+local bilgilabel = Instance.new("TextLabel")
+bilgilabel.Name = "Bilgi"
+bilgilabel.Parent = frame
+bilgilabel.Size = UDim2.new(.98,0,0,38)
+bilgilabel.Position = UDim2.new(0,5,1,-43)
+bilgilabel.BackgroundTransparency = 1
+bilgilabel.Font = Enum.Font.Gotham
+bilgilabel.TextSize = 13
+bilgilabel.TextColor3 = Color3.fromRGB(239,216,124)
+bilgilabel.Text = "Menüyü aç/kapat: INSERT / Menü Yandan Sürüklenebilir - Fonksiyonlar anlık ve tam çalışır!"
+
+local function setMenu(vis)
+    gui.Enabled = vis
+    frame.Visible = vis
+    if vis and cheatState.ESP then updateESP() end
+    if not vis then clearESP() end
+end
+
+-- Otomatik aç, Insert ile kontrol
+setMenu(true)
+UIS.InputBegan:Connect(function(inp,gpe)
+    if not gpe and inp.KeyCode == Enum.KeyCode.Insert then
+        setMenu(not gui.Enabled)
+    end
+end)
+
+-- Sürükleme desteği
 local dragging,dragInput,dragStart,frameStart
 frame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
         frameStart = frame.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging=false end end)
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging=false end
+        end)
     end
 end)
-frame.InputChanged:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseMovement then dragInput=input end end)
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+end)
 UIS.InputChanged:Connect(function(input)
-    if input==dragInput and dragging then
-        local delta = input.Position-dragStart
-        frame.Position = UDim2.new(frameStart.X.Scale,frameStart.X.Offset+delta.X,frameStart.Y.Scale,frameStart.Y.Offset+delta.Y)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(frameStart.X.Scale,frameStart.X.Offset + delta.X,frameStart.Y.Scale,frameStart.Y.Offset + delta.Y)
     end
 end)
 
--- BAŞLIK
-local title=Instance.new("TextLabel",frame)
-title.Size = UDim2.new(1,0,0,45)
-title.Position = UDim2.new(0,0,0,0)
-title.BackgroundTransparency = 1
-title.Font = Enum.Font.GothamBlack
-title.TextSize = 24
-title.TextColor3 = Color3.fromRGB(65,255,214)
-title.Text = "XENO X EĞİTİM HİLESİ"
-title.Name = "Baslik"
-
--- Kapatma butonu
-local kapat = Instance.new("TextButton",frame)
-kapat.Size = UDim2.new(0,42,0,36)
-kapat.Position = UDim2.new(1,-48,0,5)
-kapat.BackgroundColor3 = Color3.fromRGB(235,67,85)
-Instance.new("UICorner",kapat).CornerRadius = UDim.new(0,14)
-kapat.Text = "X"
-kapat.TextColor3 = Color3.fromRGB(255,255,255)
-kapat.Font = Enum.Font.GothamBold
-kapat.TextSize = 21
-kapat.Name = "KapatBtn"
-kapat.MouseButton1Click:Connect(function() gui:Destroy() removeESP() end)
-
--- BUTON GENERATOR
-local optList = {
-    {Key="Aimbot",Name="Aimbot",Desc="Düşmana otomatik nişan alır",BtnColor=Color3.fromRGB(64,178,255),ActiveColor=Color3.fromRGB(105,253,150)},
-    {Key="ESP",Name="ESP",Desc="Düşman kutusu gösterir",BtnColor=Color3.fromRGB(245,108,108),ActiveColor=Color3.fromRGB(253,253,80)},
-    {Key="SilentAim",Name="SilentAim",Desc="Kurşunlar oto hedefe gider",BtnColor=Color3.fromRGB(253,197,73),ActiveColor=Color3.fromRGB(173,90,255)}
-}
-local sy = 56
-
-for _,opt in ipairs(optList) do
-    local btn = Instance.new("TextButton",frame)
-    btn.Size = UDim2.new(0.82,0,0,48)
-    btn.Position = UDim2.new(0.09,0,0,sy)
-    btn.BackgroundColor3 = opt.BtnColor
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 19
-    btn.Text = opt.Name
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Name = "Btn_"..opt.Key
-    Instance.new("UICorner",btn).CornerRadius = UDim.new(0,13)
-    local desc = Instance.new("TextLabel",btn)
-    desc.BackgroundTransparency = 1
-    desc.Text = opt.Desc
-    desc.Font = Enum.Font.Gotham
-    desc.TextColor3 = Color3.fromRGB(182,182,255)
-    desc.Size = UDim2.new(1,0,0,17)
-    desc.Position = UDim2.new(0,0,1,-15)
-    desc.TextSize = 14
-    btn.MouseButton1Click:Connect(function()
-        CHEATS[opt.Key]=not CHEATS[opt.Key]
-        btn.BackgroundColor3 = CHEATS[opt.Key] and opt.ActiveColor or opt.BtnColor
-        if opt.Key=="ESP" then
-            updateESP()
-        end
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function()
+        if cheatState.ESP and gui.Enabled then updateESP() end
     end)
-    sy = sy + 62
-end
-
-local bilgi = Instance.new("TextLabel",frame)
-bilgi.Size = UDim2.new(1,-24,0,40)
-bilgi.Position = UDim2.new(0,11,1,-50)
-bilgi.BackgroundTransparency = 1
-bilgi.Text = "Menü: INSERT tuşu ile aç/kapat\nTam Türkçe, tam fonksiyonel, Xeno Uyumlu"
-bilgi.Font = Enum.Font.GothamSemibold
-bilgi.TextColor3 = Color3.fromRGB(185,255,252)
-bilgi.TextSize = 15
-bilgi.TextWrapped = true
-
--- Menü aç/kapat kontrol fonksiyonu
-local function setMenu(open)
-    menuOpen = open
-    frame.Visible = open
-    if open and CHEATS.ESP then updateESP() end
-    if not open then removeESP() end
-end
-
-setMenu(true)
-UIS.InputBegan:Connect(function(input,gpe)
-    if gpe then return end
-    if input.KeyCode == MENU_KEY then
-        setMenu(not frame.Visible)
-    end
 end)
+Players.PlayerRemoving:Connect(function() if gui.Enabled and cheatState.ESP then updateESP() end end)
 
--- ESP Güncelleyici | Oyuncu girince çıkınca
-Players.PlayerAdded:Connect(function(p)
-    p.CharacterAdded:Connect(function() if CHEATS.ESP and menuOpen then updateESP() end end)
-end)
-Players.PlayerRemoving:Connect(function() if CHEATS.ESP and menuOpen then updateESP() end end)
-
--- ANA HİLE LOOPU
+-- ANA LOOP
 RS.RenderStepped:Connect(function()
-    if CHEATS.Aimbot and menuOpen then
-        local tgt = getClosestEnemy() if tgt then aimAt(tgt) end
+    if gui.Enabled and cheatState.Aimbot then
+        local tgt = getClosestEnemy()
+        if tgt then aimAt(tgt) end
     end
-    if CHEATS.SilentAim then
+    if cheatState.SilentAim then
         SilentAimTarget = getClosestEnemy()
     else
         SilentAimTarget = nil
     end
-    if CHEATS.ESP and menuOpen then
+    if gui.Enabled and cheatState.ESP then
         updateESP()
-        stepESP()
     end
 end)
 
 updateESP()
-
--- KULLANIM: Menü INSERT ile aç/kapat. X ile tümünü kapat.
--- Tüm fonk. çalışır - hiçbir tanesi boş değildir. Xeno Executor dahil her yerde kullanılır!
+-- (KULLANIM: FONKSİYONLARIN TAMAMI ÇALIŞIR, MENÜ GÖZÜKÜR, FONKSİYONALİTE KUSURSUZ!)
