@@ -1,5 +1,6 @@
-local menuKey = Enum.KeyCode.RightShift
+// ROBLOX LUA HİLESİ - AİMBOT, ESP, SİLENTAİM, MENÜLÜ (Tüm fonksiyonlar dolu)
 
+-- Servisler
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -7,384 +8,245 @@ local Camera = workspace.CurrentCamera
 
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
-local menuOpen = true
 
-local settings = {
+-- Hile ayarları
+local cheats = {
     Aimbot = false,
     ESP = false,
-    SilentAim = false,
+    SilentAim = false
+}
+-- Menü pozisyonu
+local menu = {
+    Visible = false,
+    X = 450,
+    Y = 200,
+    Width = 270,
+    Height = 200
 }
 
-pcall(function()
-    for _, v in ipairs(game:GetService("CoreGui"):GetChildren()) do
-        if v.Name == "GENE_MENU" then v:Destroy() end
+-- Silentaima yardımcı değişkenler
+local aimTarget = nil
+
+-----------------------------------
+-- Anti-enemy (takım kontrolü)
+local function isEnemy(player)
+    if player == LocalPlayer then return false end
+    -- Team'li oyunlar için:
+    if player.Team ~= nil and LocalPlayer.Team ~= nil then
+        return player.Team ~= LocalPlayer.Team
     end
-end)
-
-local gui = Instance.new("ScreenGui")
-gui.Name = "GENE_MENU"
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-gui.Parent = (gethui and gethui()) or (syn and syn.protect_gui and syn.protect_gui(game.CoreGui)) or game.CoreGui
-
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainMenu"
-mainFrame.Size = UDim2.new(0, 350, 0, 265)
-mainFrame.Position = UDim2.new(0.5, -175, 0.5, -132)
-mainFrame.BackgroundColor3 = Color3.fromRGB(255,255,255)
-mainFrame.BorderSizePixel = 0
-mainFrame.AnchorPoint = Vector2.new(0,0)
-mainFrame.Visible = true
-mainFrame.Parent = gui
-
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0,14)
-mainCorner.Parent = mainFrame
-
-local topBar = Instance.new("Frame")
-topBar.Name = "TopBar"
-topBar.Size = UDim2.new(1, 0, 0, 44)
-topBar.Position = UDim2.new(0, 0, 0, 0)
-topBar.BackgroundColor3 = Color3.fromRGB(255,255,255)
-topBar.BorderSizePixel = 0
-topBar.Parent = mainFrame
-
-local barLine = Instance.new("Frame")
-barLine.Size = UDim2.new(1, 0, 0, 2)
-barLine.Position = UDim2.new(0,0,1,-2)
-barLine.BackgroundColor3 = Color3.fromRGB(0,0,0)
-barLine.BorderSizePixel = 0
-barLine.Parent = topBar
-
-local title = Instance.new("TextLabel")
-title.Name = "MenuTitle"
-title.Size = UDim2.new(1,-26,1,0)
-title.Position = UDim2.new(0,13,0,0)
-title.BackgroundTransparency = 1
-title.Text = "GENE ROBLOX CHEAT MENU"
-title.Font = Enum.Font.GothamBlack
-title.TextColor3 = Color3.fromRGB(0,0,0)
-title.TextSize = 25
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = topBar
-
-local toggleY = 56
-local toggleGap = 22
-local toggleHeight = 42
-local toggles = {}
-
-local function makeToggle(text, settingKey, index)
-    local btn = Instance.new("TextButton")
-    btn.Name = settingKey.."Btn"
-    btn.Size = UDim2.new(0.9,0,0,toggleHeight)
-    btn.Position = UDim2.new(0.05,0,0,toggleY+((index-1)*(toggleHeight+toggleGap)))
-    btn.BackgroundColor3 = Color3.fromRGB(0,0,0)
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.BorderSizePixel = 0
-    btn.Font = Enum.Font.GothamBold
-    btn.Text = text..": OFF"
-    btn.TextSize = 21
-    btn.AutoButtonColor = false
-    btn.Parent = mainFrame
-
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0,13)
-    btnCorner.Parent = btn
-
-    btn.MouseEnter:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    end)
-    btn.MouseLeave:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(0,0,0)
-    end)
-    btn.MouseButton1Click:Connect(function()
-        settings[settingKey] = not settings[settingKey]
-        btn.Text = text..": "..(settings[settingKey] and "ON" or "OFF")
-        if settingKey == "ESP" and not settings.ESP then
-            clearEsp()
-        end
-    end)
-
-    table.insert(toggles,btn)
-    return btn
+    return true
 end
 
-local aimToggle = makeToggle("Aimbot", "Aimbot", 1)
-local espToggle = makeToggle("ESP", "ESP", 2)
-local silentToggle = makeToggle("SilentAim", "SilentAim", 3)
+-----------------------------------
+-- En yakın düşmanı bul
+local function getClosestEnemyToCursor()
+    local shortest = math.huge
+    local target = nil
 
-local footer = Instance.new("TextLabel")
-footer.Name = "Footer"
-footer.Size = UDim2.new(1, 0, 0, 24)
-footer.Position = UDim2.new(0, 0, 1, -24)
-footer.BackgroundTransparency = 1
-footer.Text = "Menu: RightShift | @GENE"
-footer.TextColor3 = Color3.fromRGB(0,0,0)
-footer.Font = Enum.Font.GothamSemibold
-footer.TextSize = 15
-footer.Parent = mainFrame
-
-local dragging, dragInput, dragStart, startPos
-topBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = mainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-topBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input == dragInput then
-        local delta = input.Position - dragStart
-        mainFrame.Position = startPos + UDim2.new(0, delta.X, 0, delta.Y)
-    end
-end)
-
-UserInputService.InputBegan:Connect(function(input,gp)
-    if not gp and input.KeyCode == menuKey then
-        menuOpen = not menuOpen
-        mainFrame.Visible = menuOpen
-    end
-end)
-
-local espObjects = {}
-
-function clearEsp()
-    for _, obj in ipairs(espObjects) do
-        if obj.Box and typeof(obj.Box.Remove) == "function" then pcall(function() obj.Box:Remove() end) end
-        if obj.Head and typeof(obj.Head.Remove) == "function" then pcall(function() obj.Head:Remove() end) end
-        if obj.Skeleton then for _,l in ipairs(obj.Skeleton) do if typeof(l.Remove) == "function" then pcall(function() l:Remove() end) end end end
-    end
-    espObjects = {}
-end
-
-local function DLine()
-    local l = Drawing.new("Line")
-    l.Color = Color3.new(1,1,1)
-    l.Thickness = 2
-    l.Transparency = 1
-    l.Visible = true
-    return l
-end
-local function DBox()
-    local b = Drawing.new("Square")
-    b.Color = Color3.new(1,1,1)
-    b.Thickness = 2
-    b.Transparency = 1
-    b.Filled = false
-    b.Visible = true
-    return b
-end
-local function DCircle()
-    local c = Drawing.new("Circle")
-    c.Color = Color3.new(1,1,1)
-    c.Thickness = 2
-    c.NumSides = 22
-    c.Transparency = 1
-    c.Filled = false
-    c.Visible = true
-    return c
-end
-
-local function parttbl(char)
-    return {
-        Head = char:FindFirstChild("Head"),
-        Root = char:FindFirstChild("HumanoidRootPart"),
-        UpperTorso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso"),
-        LeftArm = char:FindFirstChild("LeftUpperArm") or char:FindFirstChild("Left Arm") or char:FindFirstChild("LeftHand"),
-        RightArm = char:FindFirstChild("RightUpperArm") or char:FindFirstChild("Right Arm") or char:FindFirstChild("RightHand"),
-        LeftLeg = char:FindFirstChild("LeftUpperLeg") or char:FindFirstChild("Left Leg") or char:FindFirstChild("LeftFoot"),
-        RightLeg = char:FindFirstChild("RightUpperLeg") or char:FindFirstChild("Right Leg") or char:FindFirstChild("RightFoot"),
-    }
-end
-
-local function renderEsp()
-    clearEsp()
-    for _,plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer 
-        and plr.Team ~= nil and LocalPlayer.Team ~= nil
-        and plr.Team ~= LocalPlayer.Team
-        and plr.Character
-        and plr.Character:FindFirstChild("Head")
-        and plr.Character:FindFirstChild("Humanoid")
-        and plr.Character.Humanoid.Health > 0 then
-
-            local char = plr.Character
-            local pts = parttbl(char)
-            if not pts.Head or not pts.Root then
-                continue
-            end
-
-            local mainParts = {"Head", "Root", "UpperTorso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"}
-            local minX, minY, maxX, maxY = math.huge, math.huge, -math.huge, -math.huge
-            local positions, onScreenCount = {}, 0
-            for _,partName in ipairs(mainParts) do
-                local part = pts[partName]
-                if part then
-                    local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
-                    if onScreen then
-                        positions[partName] = pos
-                        onScreenCount = onScreenCount + 1
-                        minX = math.min(minX, pos.X)
-                        minY = math.min(minY, pos.Y)
-                        maxX = math.max(maxX, pos.X)
-                        maxY = math.max(maxY, pos.Y)
-                    end
-                end
-            end
-
-            if onScreenCount >= 2 then
-                local box = DBox()
-                box.Position = Vector2.new(minX, minY)
-                box.Size = Vector2.new(math.max(14, maxX-minX), math.max(38, maxY-minY))
-                box.Visible = true
-
-                local circ = nil
-                if positions.Head then
-                    circ = DCircle()
-                    circ.Position = Vector2.new(positions.Head.X, positions.Head.Y)
-                    circ.Radius = math.clamp((maxX-minX)/7, 13, 38)
-                    circ.Visible = true
-                end
-
-                local skeleton = {}
-                if circ then
-                    -- Head-root
-                    if positions.Head and positions.Root then
-                        local l = DLine()
-                        l.From = Vector2.new(positions.Head.X, positions.Head.Y + circ.Radius)
-                        l.To = Vector2.new(positions.Root.X, positions.Root.Y)
-                        table.insert(skeleton, l)
-                    end
-                    -- UpperTorso-arms
-                    if positions.UpperTorso and positions.LeftArm then
-                        local l = DLine()
-                        l.From = Vector2.new(positions.UpperTorso.X, positions.UpperTorso.Y)
-                        l.To = Vector2.new(positions.LeftArm.X, positions.LeftArm.Y)
-                        table.insert(skeleton, l)
-                    end
-                    if positions.UpperTorso and positions.RightArm then
-                        local l = DLine()
-                        l.From = Vector2.new(positions.UpperTorso.X, positions.UpperTorso.Y)
-                        l.To = Vector2.new(positions.RightArm.X, positions.RightArm.Y)
-                        table.insert(skeleton, l)
-                    end
-                    -- Root-legs
-                    if positions.Root and positions.LeftLeg then
-                        local l = DLine()
-                        l.From = Vector2.new(positions.Root.X, positions.Root.Y)
-                        l.To = Vector2.new(positions.LeftLeg.X, positions.LeftLeg.Y)
-                        table.insert(skeleton, l)
-                    end
-                    if positions.Root and positions.RightLeg then
-                        local l = DLine()
-                        l.From = Vector2.new(positions.Root.X, positions.Root.Y)
-                        l.To = Vector2.new(positions.RightLeg.X, positions.RightLeg.Y)
-                        table.insert(skeleton, l)
-                    end
-                end
-
-                table.insert(espObjects, {Box = box, Head = circ, Skeleton = skeleton})
-            end
-        end
-    end
-end
-
-local function getClosestEnemyToMouse()
-    local closest, minDist = nil, math.huge
-    for _,plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer 
-            and plr.Team ~= nil and LocalPlayer.Team ~= nil
-            and plr.Team ~= LocalPlayer.Team
-            and plr.Character and plr.Character:FindFirstChild("Head")
-            and plr.Character:FindFirstChild("Humanoid")
-            and plr.Character.Humanoid.Health > 0 then
-            local head = plr.Character.Head
-            local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
-            if onScreen then
-                local dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
-                if dist < minDist then
-                    closest = head
-                    minDist = dist
+    for _, player in ipairs(Players:GetPlayers()) do
+        if isEnemy(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, onscreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            if onscreen then
+                local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).magnitude
+                if dist < shortest then
+                    shortest = dist
+                    target = player
                 end
             end
         end
     end
-    return closest
+    return target
 end
 
-local function moveMouseTo(dx, dy)
-    -- best supports for all popular executors
-    if type(mousemoverel) == "function" then
-        mousemoverel(dx, dy)
-    elseif type(mouse_event) == "function" then
-        mouse_event(1, dx, dy, 0, 0)
-    elseif writeclipboard and (isrbxactive and isrbxactive() or true) then
-        -- fallback virtual input movement
-        local vim = game:GetService("VirtualInputManager")
-        vim:SendMouseMove(Mouse.X+dx, Mouse.Y+dy)
-    end
-end
+-----------------------------------
+-- Aimbot fonksiyonu
+local function doAimbot()
+    if not cheats.Aimbot then return end
 
-local function aimAt(target)
+    local target = getClosestEnemyToCursor()
     if not target then return end
-    local pos = Camera:WorldToViewportPoint(target.Position)
-    local dx, dy = pos.X - Mouse.X, pos.Y - Mouse.Y
-    moveMouseTo(dx, dy)
+
+    if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        local root = target.Character.HumanoidRootPart
+        local rootPos = root.Position
+        local camPos = Camera.CFrame.Position
+        local direction = (rootPos - camPos).Unit
+
+        Camera.CFrame = CFrame.new(camPos, camPos + direction)
+    end
 end
 
-local silentTarget = nil
-local __namecall
-do
-    local mt = getrawmetatable(game)
-    setreadonly(mt, false)
-    local old = mt.__namecall
-    __namecall = function(self, ...)
-        local method = getnamecallmethod and getnamecallmethod() or ""
+-----------------------------------
+-- SilentAim fonksiyonu
+local function doSilentAim()
+    if not cheats.SilentAim then return end
+    aimTarget = getClosestEnemyToCursor()
+end
+
+-- Mouse'a hook
+local oldNamecall = nil
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    if cheats.SilentAim and aimTarget and tostring(method) == "FindPartOnRayWithIgnoreList" then
         local args = {...}
-        if settings.SilentAim and tostring(method):lower() == "fireserver" then
-            local s = tostring(self):lower()
-            if (s:find("hit") or s:find("bullet") or s:find("shoot")) and silentTarget and silentTarget.Parent then
-                args[1] = silentTarget
-                return old(self, unpack(args))
-            end
+        if aimTarget.Character and aimTarget.Character:FindFirstChild("Head") then
+            local head = aimTarget.Character.Head.Position
+            local camPos = Camera.CFrame.Position
+            local dir = (head - camPos).Unit * 500
+            args[1] = Ray.new(camPos, dir)
+            return oldNamecall(self, unpack(args))
         end
-        return old(self, ...)
+    end
+    return oldNamecall(self, ...)
+end)
+
+-----------------------------------
+-- ESP Utility
+local ESP_Instances = {}
+
+local function removeESP()
+    for _, v in pairs(ESP_Instances) do
+        if v and v.Remove then
+            v:Remove()
+        end
+    end
+    ESP_Instances = {}
+end
+
+local function createESPForCharacter(char)
+    if not char:FindFirstChild("HumanoidRootPart") then return end
+
+    -- Bacak ve vücudu kapsayacak kutu
+    local root = char.HumanoidRootPart
+
+    local function makeBox()
+        local BillboardGui = Instance.new("BillboardGui")
+        BillboardGui.AlwaysOnTop = true
+        BillboardGui.Size = UDim2.new(0, 90, 0, 200)
+        BillboardGui.Adornee = root
+        BillboardGui.StudsOffset = Vector3.new(0, -2, 0)
+        BillboardGui.Parent = game:GetService("CoreGui")
+
+        local Box = Instance.new("Frame")
+        Box.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        Box.BackgroundTransparency = 0.65
+        Box.Size = UDim2.new(1, 0, 1, 0)
+        Box.BorderSizePixel = 2
+        Box.BorderColor3 = Color3.fromRGB(255, 0, 0)
+        Box.Parent = BillboardGui
+
+        local obj = {}
+        function obj.Remove()
+            BillboardGui:Destroy()
+        end
+        return obj
     end
 
-    if hookmetamethod then
-        hookmetamethod(game, "__namecall", newcclosure(__namecall))
-    else
-        mt.__namecall = newcclosure(__namecall)
+    table.insert(ESP_Instances, makeBox())
+end
+
+local function updateESP()
+    if not cheats.ESP then
+        removeESP()
+        return
+    end
+
+    removeESP()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if isEnemy(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            createESPForCharacter(player.Character)
+        end
     end
 end
 
-RunService.RenderStepped:Connect(function()
-    -- ESP
-    if settings.ESP then
-        renderEsp()
-    else
-        clearEsp()
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function()
+        updateESP()
+    end)
+end)
+Players.PlayerRemoving:Connect(function()
+    updateESP()
+end)
+
+-----------------------------------
+-- Hile menüsü (Simple Drawing)
+local Drawing = Drawing or nil
+if not Drawing then
+    -- Basic Drawing yerine Roblox GUI'leri ile menü yapılacak
+    local menuGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
+    menuGui.Name = "HileMenu"
+    menuGui.ResetOnSpawn = false
+
+    local bg = Instance.new("Frame", menuGui)
+    bg.Position = UDim2.new(0, menu.X, 0, menu.Y)
+    bg.Size = UDim2.new(0, menu.Width, 0, menu.Height)
+    bg.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    bg.BorderColor3 = Color3.fromRGB(25,25,25)
+    bg.BorderSizePixel = 2
+    bg.Visible = false
+
+    local title = Instance.new("TextLabel", bg)
+    title.Text = "Roblox Hile Menüsü"
+    title.TextColor3 = Color3.fromRGB(0,0,0)
+    title.Size = UDim2.new(1,0,0,40)
+    title.Position = UDim2.new(0,0,0,0)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.SourceSansBold
+    title.TextScaled = true
+
+    -- Seçenek butonları
+    local buttons = {}
+    local toggleOrder = {"Aimbot","ESP","SilentAim"}
+    for index, opt in ipairs(toggleOrder) do
+        local btn = Instance.new("TextButton", bg)
+        btn.Size = UDim2.new(1,-30,0,34)
+        btn.Position = UDim2.new(0,15,0,40+((index-1)*45))
+        btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+        btn.BorderSizePixel = 0
+        btn.Text = opt
+        btn.Name = opt
+        btn.TextColor3 = Color3.fromRGB(255,255,255)
+        btn.Font = Enum.Font.SourceSansBold
+        btn.TextSize = 22
+
+        btn.MouseButton1Click:Connect(function()
+            cheats[opt] = not cheats[opt]
+            if opt == "ESP" then
+                updateESP()
+            end
+            btn.BackgroundColor3 = cheats[opt] and Color3.fromRGB(60,60,60) or Color3.fromRGB(25,25,25)
+        end)
+        table.insert(buttons, btn)
     end
-    -- Aimbot
-    if settings.Aimbot then
-        local target = getClosestEnemyToMouse()
-        if target and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-            aimAt(target)
+
+    -- Aç kapa tuşu
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if not processed and input.KeyCode == Enum.KeyCode.Insert then
+            bg.Visible = not bg.Visible
         end
+    end)
+end
+
+-----------------------------------
+-- Per-frame güncellemeler
+RunService.RenderStepped:Connect(function()
+    if cheats.Aimbot then
+        doAimbot()
     end
-    -- SilentAim
-    if settings.SilentAim then
-        silentTarget = getClosestEnemyToMouse()
+    if cheats.SilentAim then
+        doSilentAim()
     else
-        silentTarget = nil
+        aimTarget = nil
+    end
+    if cheats.ESP then
+        updateESP()
     end
 end)
+
+-----------------------------------
+-- Başlangıç mesajı
+print("[ROBLOX HİLESİ] Aimbot, ESP ve SilentAim etkin!")
+print("[MENÜ] Insert tuşuna basarak hile menüsünü aç/kapat.")
+
+-- End of script
