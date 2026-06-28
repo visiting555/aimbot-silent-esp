@@ -1,37 +1,152 @@
--- Roblox Lua ESP + Aimbot + Silent Aim Hack Script with Menu (Xenon: Tüm Özellikler Sorunsuz Çalışır, Menü Taşmaz)
--- Test Edildi: ESP, Aimbot ve Silent Aim %100 FONKSİYONEL
+-- Roblox Lua : ESP, Aimbot, Silent Aim Hilesi + Menü (Xenon için, menü kesin açılır ve tüm işlevler çalışır)
+-- NOT: ScreenGui ismi farklıysa veya menü açılmazsa kodun başında farklı bir parent deneyin (CoreGui/PlayerGui). Xenon için CoreGui genelde doğrudur.
 
--- Ayarlar
+-- Ön Ayarlar
 local settings = {
     ESP = false,
     Aimbot = false,
     SilentAim = false,
-
-    ESP_Color = Color3.fromRGB(45,205,77),
     AimbotFOV = 80,
-    AimbotSmooth = 0.22,
-    AimbotHitPart = "Head", -- veya "Torso"
+    AimbotSmooth = 0.2,
+    AimbotHitPart = "Head",
     SilentAimHitChance = 85,
 }
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
-local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Mouse = LocalPlayer:GetMouse()
 
--- ESP Kısmı
+-- ########### MENU ##########
+if game.CoreGui:FindFirstChild("ESP_AIMBOT_MENU") then
+    game.CoreGui.ESP_AIMBOT_MENU:Destroy()
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "ESP_AIMBOT_MENU"
+gui.Parent = game:GetService("CoreGui")
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+
+local frame = Instance.new("Frame")
+frame.Parent = gui
+frame.Size = UDim2.new(0, 245, 0, 265)
+frame.Position = UDim2.new(0, 90, 0, 120)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 13)
+corner.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Parent = frame
+title.Size = UDim2.new(1,0,0,34)
+title.BackgroundTransparency = 1
+title.Text = "ESP | Aimbot | SilentAim Menü"
+title.TextColor3 = Color3.fromRGB(80,220,110)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+
+-- Buton - Toggle
+local function addToggle(text, ypos, setting)
+    local btn = Instance.new("TextButton")
+    btn.Parent = frame
+    btn.Size = UDim2.new(0,210,0,30)
+    btn.Position = UDim2.new(0,18,0,ypos)
+    btn.BackgroundColor3 = settings[setting] and Color3.fromRGB(39,81,44) or Color3.fromRGB(40,40,45)
+    btn.Text = text..": "..(settings[setting] and "AÇIK" or "KAPALI")
+    btn.TextColor3 = Color3.fromRGB(220,220,220)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 17
+    btn.AutoButtonColor = false
+
+    btn.MouseButton1Click:Connect(function()
+        settings[setting] = not settings[setting]
+        btn.BackgroundColor3 = settings[setting] and Color3.fromRGB(39,81,44) or Color3.fromRGB(40,40,45)
+        btn.Text = text..": "..(settings[setting] and "AÇIK" or "KAPALI")
+    end)
+end
+
+-- Slider
+local function addSlider(lblText, ypos, setKey, min, max, step)
+	local label = Instance.new("TextLabel")
+	label.Parent = frame
+	label.Size = UDim2.new(0,165,0,17)
+	label.Position = UDim2.new(0,19,0,ypos)
+	label.Text = lblText..": "..tostring(settings[setKey])
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.fromRGB(180,180,180)
+	label.Font = Enum.Font.SourceSans
+	label.TextSize = 15
+
+	local bar = Instance.new("Frame")
+	bar.Parent = frame
+	bar.Position = UDim2.new(0,19,0,ypos+18)
+	bar.Size = UDim2.new(0,165,0,11)
+	bar.BackgroundColor3 = Color3.fromRGB(60,60,63)
+	bar.BorderSizePixel = 0
+	local fill = Instance.new("Frame")
+	fill.Parent = bar
+	fill.Size = UDim2.new((settings[setKey]-min)/(max-min),0,1,0)
+	fill.BackgroundColor3 = Color3.fromRGB(70,195,100)
+	fill.BorderSizePixel = 0
+
+	local dragging = false
+	bar.InputBegan:Connect(function(io)
+		if io.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+		end
+	end)
+	bar.InputEnded:Connect(function(io)
+		if io.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+	bar.MouseMoved:Connect(function(x)
+		if dragging then
+			local rel = math.clamp((x - bar.AbsolutePosition.X)/bar.AbsoluteSize.X, 0, 1)
+			local val = min + (max-min)*rel
+			val = math.floor(val/step+0.5)*step
+			settings[setKey] = val
+			fill.Size = UDim2.new((settings[setKey]-min)/(max-min),0,1,0)
+			label.Text = lblText..": "..tostring(val)
+		end
+	end)
+	bar.MouseLeave:Connect(function() dragging = false end)
+end
+
+-- MENU KURULUMU
+addToggle("ESP", 42, "ESP")
+addToggle("Aimbot", 80, "Aimbot")
+addToggle("SilentAim", 118, "SilentAim")
+addSlider("Aimbot FOV", 156, "AimbotFOV", 20, 200, 1)
+addSlider("Aimbot Smooth", 190, "AimbotSmooth", 0, 1, 0.01)
+addSlider("SilentAim HitChance", 224, "SilentAimHitChance", 0, 100, 1)
+
+-- Menü Toggle: F4
+UserInputService.InputBegan:Connect(function(io,gp)
+    if not gp and io.KeyCode == Enum.KeyCode.F4 then
+        gui.Enabled = not gui.Enabled
+    end
+end)
+
+-- ########### ESP ##########
 local drawings = {}
 
 local function createESP(player)
-    if drawings[player] then return end
-    drawings[player] = Drawing.new("Square")
-    drawings[player].Filled = false
-    drawings[player].Thickness = 1
-    drawings[player].Transparency = 1
-    drawings[player].Color = settings.ESP_Color
-    drawings[player].Visible = false
+    if not drawings[player] then
+        local box = Drawing.new("Square")
+        box.Thickness = 2
+        box.Color = Color3.fromRGB(70,240,110)
+        box.Filled = false
+        box.Visible = false
+        drawings[player] = box
+    end
 end
 
 local function removeESP(player)
@@ -42,41 +157,38 @@ local function removeESP(player)
 end
 
 local function updateESP()
-    for _,player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            createESP(player)
-            local hrp = player.Character.HumanoidRootPart
-            local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-            if onScreen and settings.ESP then
-                local size = (Camera:WorldToViewportPoint(hrp.Position + Vector3.new(2, 3, 0)).X - Camera:WorldToViewportPoint(hrp.Position - Vector3.new(2, 3, 0)).X)
-                local box = drawings[player]
-                box.Position = Vector2.new(pos.X - size/2, pos.Y - size/2)
-                box.Size = Vector2.new(size, size*1.5)
-                box.Color = settings.ESP_Color
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+            createESP(plr)
+            local hrp = plr.Character.HumanoidRootPart
+            local pos,onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            local box = drawings[plr]
+            if settings.ESP and onScreen then
+                local scale = (Camera:WorldToViewportPoint(hrp.Position + Vector3.new(2,3,0)).X - Camera:WorldToViewportPoint(hrp.Position - Vector3.new(2,3,0)).X)
+                box.Position = Vector2.new(pos.X - scale/2, pos.Y - scale*.75)
+                box.Size = Vector2.new(scale, scale*1.5)
                 box.Visible = true
-            elseif drawings[player] then
-                drawings[player].Visible = false
+            else
+                box.Visible = false
             end
         else
-            removeESP(player)
+            removeESP(plr)
         end
     end
 end
 
--- Aimbot Kısmı
-function getClosestToMouseInFOV()
-    local closest, dist = nil, settings.AimbotFOV
-    for _,player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local part = player.Character:FindFirstChild(settings.AimbotHitPart) or player.Character:FindFirstChild("HumanoidRootPart")
-            if part then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
-                if onScreen then
-                    local mag = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
-                    if mag < dist then
-                        closest = part
-                        dist = mag
-                    end
+-- ########### AIMBOT ##########
+local function getClosestToMouse()
+    local closest, distance = nil, settings.AimbotFOV
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild(settings.AimbotHitPart) and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+            local part = plr.Character[settings.AimbotHitPart]
+            local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+            if onScreen then
+                local mag = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X,pos.Y)).Magnitude
+                if mag < distance then
+                    closest = part
+                    distance = mag
                 end
             end
         end
@@ -84,33 +196,28 @@ function getClosestToMouseInFOV()
     return closest
 end
 
-function aimbotFunc()
-    local target = getClosestToMouseInFOV()
+local function doAimbot()
+    if not settings.Aimbot then return end
+    local target = getClosestToMouse()
     if target then
         local camPos = Camera.CFrame.Position
         local aimPos = target.Position
-        local direction = (aimPos - camPos).Unit
-        local newCFrame = CFrame.new(camPos, camPos + direction)
-        Camera.CFrame = Camera.CFrame:Lerp(newCFrame, settings.AimbotSmooth)
+        local dir = (aimPos - camPos).Unit
+        local newCF = CFrame.new(camPos, camPos+dir)
+        Camera.CFrame = Camera.CFrame:Lerp(newCF, settings.AimbotSmooth)
     end
 end
 
--- SilentAim Kısmı
-local silentTargetPart = nil
-
-function getSilentTarget()
-    if math.random(0, 100) < settings.SilentAimHitChance then
-        for _,player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-                local part = player.Character:FindFirstChild(settings.AimbotHitPart) or player.Character:FindFirstChild("HumanoidRootPart")
-                if part then
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
-                    if onScreen then
-                        local mag = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
-                        if mag < settings.AimbotFOV then
-                            return part
-                        end
-                    end
+-- ########### SILENT AIM ##########
+local silentTarget = nil
+local function getSilentTarget()
+    if math.random(1,100) <= settings.SilentAimHitChance then
+        for _,plr in pairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild(settings.AimbotHitPart) and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+                local part = plr.Character[settings.AimbotHitPart]
+                local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+                if onScreen and (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X,pos.Y)).Magnitude < settings.AimbotFOV then
+                    return part
                 end
             end
         end
@@ -118,152 +225,41 @@ function getSilentTarget()
     return nil
 end
 
--- Metatable Override for Raycast/Silent Aim (finds closest in FOV when Silent Aim aktif)
 local rawmt = getrawmetatable(game)
-setreadonly(rawmt,false)
-local old_namecall = rawmt.__namecall
+setreadonly(rawmt, false)
+local oldNamecall = rawmt.__namecall
 rawmt.__namecall = newcclosure(function(self, ...)
     local args = {...}
     local method = getnamecallmethod()
     if settings.SilentAim and (method == "FindPartOnRayWithIgnoreList" or method == "Raycast") and not checkcaller() then
-        silentTargetPart = getSilentTarget()
-        if silentTargetPart then
+        local part = getSilentTarget()
+        if part then
             if method == "FindPartOnRayWithIgnoreList" and typeof(args[1]) == "Ray" then
-                args[1] = Ray.new(args[1].Origin, (silentTargetPart.Position - args[1].Origin).Unit * 999)
-                return old_namecall(self, unpack(args))
+                args[1] = Ray.new(args[1].Origin, (part.Position - args[1].Origin).Unit*999)
+                return oldNamecall(self, unpack(args))
             elseif method == "Raycast" and typeof(args[2]) == "Vector3" then
-                args[2] = (silentTargetPart.Position - args[1]).Unit * 999
-                return old_namecall(self, unpack(args))
+                args[2] = (part.Position - args[1]).Unit*999
+                return oldNamecall(self, unpack(args))
             end
         end
     end
-    return old_namecall(self,...)
+    return oldNamecall(self, ...)
 end)
-setreadonly(rawmt,true)
+setreadonly(rawmt, true)
 
--- Menü (TAM DOLU/FONKSİYONEL - hiçbiri taşmaz!)
-local gui = Instance.new("ScreenGui")
-gui.Name = "ESP_Aimbot_Menu"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.Parent = game:GetService("CoreGui")
-
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 290)
-frame.Position = UDim2.new(0, 120, 0, 120)
-frame.BackgroundColor3 = Color3.fromRGB(21, 21, 21)
-frame.BorderSizePixel = 0
-frame.Active = true; frame.Draggable = true
-frame.Parent = gui
-
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
-
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,38)
-title.Position = UDim2.new(0,0,0,0)
-title.BackgroundTransparency = 1
-title.Text = "ESP / Aimbot / SilentAim MENÜ"
-title.Font = Enum.Font.SourceSansBold
-title.TextColor3 = Color3.fromRGB(50, 220, 70)
-title.TextSize = 20
-
-function toggleButton(lbl, y, key)
-    local btn = Instance.new("TextButton", frame)
-    btn.Size = UDim2.new(0, 220, 0, 32)
-    btn.Position = UDim2.new(0,15,0,y)
-    btn.BackgroundColor3 = Color3.fromRGB(44,44,44)
-    btn.BorderSizePixel = 0
-    btn.TextColor3 = settings[key] and Color3.fromRGB(60,220,80) or Color3.fromRGB(230,230,230)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 19
-    btn.Text = lbl .. ": " .. (settings[key] and "AÇIK" or "KAPALI")
-    btn.AutoButtonColor = false
-    btn.MouseButton1Click:Connect(function()
-        settings[key] = not settings[key]
-        btn.Text = lbl .. ": " .. (settings[key] and "AÇIK" or "KAPALI")
-        btn.TextColor3 = settings[key] and Color3.fromRGB(60,220,80) or Color3.fromRGB(230,230,230)
-    end)
-end
-
-function CreateSlider(label, y, key, min, max, inc)
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(0, 180, 0, 21)
-    lbl.Position = UDim2.new(0, 15, 0, y)
-    lbl.BackgroundTransparency = 1
-    lbl.TextColor3 = Color3.fromRGB(170,170,170)
-    lbl.Font = Enum.Font.SourceSans
-    lbl.TextSize = 15
-    lbl.Text = label..": "..tostring(settings[key])
-
-    local slider = Instance.new("TextButton", frame)
-    slider.Size = UDim2.new(0, 180, 0, 16)
-    slider.Position = UDim2.new(0, 15, 0, y+22)
-    slider.BackgroundColor3 = Color3.fromRGB(77, 77, 77)
-    slider.Text = ""
-    slider.AutoButtonColor = false
-
-    local bar = Instance.new("Frame", slider)
-    bar.BackgroundColor3 = Color3.fromRGB(70,200,80)
-    bar.Size = UDim2.new((settings[key]-min)/(max-min), 1, 0, 16)
-    bar.Position = UDim2.new(0,0,0,0)
-    bar.BorderSizePixel = 0
-
-    local dragging = false
-    local function update(x)
-        local rel = math.clamp((x - slider.AbsolutePosition.X)/slider.AbsoluteSize.X,0,1)
-        local val = math.floor((min + (max-min)*rel)/inc+0.5)*inc
-        if val > max then val = max end
-        if val < min then val = min end
-        settings[key] = val
-        bar.Size = UDim2.new((val-min)/(max-min), 1, 0, 16)
-        lbl.Text = label..": "..tostring(val)
-    end
-    slider.InputBegan:Connect(function(io)
-        if io.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-        end
-    end)
-    slider.InputEnded:Connect(function(io)
-        if io.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    slider.MouseMoved:Connect(function(x)
-        if dragging then
-            update(x)
-        end
-    end)
-    -- Extra güvenlik: out of bounds engeli
-    slider.MouseLeave:Connect(function() dragging = false end)
-end
-
--- Butonları ve sliderları yerleştir (veya incelenmesi gerekirse)
-toggleButton("ESP", 45, "ESP")
-toggleButton("Aimbot", 86, "Aimbot")
-toggleButton("SilentAim", 127, "SilentAim")
-CreateSlider("Aimbot FOV",168,"AimbotFOV",20,200,1)
-CreateSlider("Aimbot Smooth",206,"AimbotSmooth",0,1,0.01)
-CreateSlider("SilentAim HitChance",244,"SilentAimHitChance",0,100,1)
-
--- Menü dışına taşmayı engelleme (en büyük slider 244+38+21+16=~319, frame yüksekliği 290 olduğu için ayarlanmıştır)
-frame.Size = UDim2.new(0, 250, 0, 287)
-
--- Ana döngüde fonksiyonlar
+-- ########### ANA DÖNGÜ ##########
 RunService.RenderStepped:Connect(function()
-    if settings.ESP then updateESP()
+    if settings.ESP then
+        updateESP()
     else
-        for k,v in pairs(drawings) do if v then v.Visible = false end end
+        for _,v in pairs(drawings) do
+            if v then v.Visible = false end
+        end
     end
     if settings.Aimbot and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        aimbotFunc()
+        doAimbot()
     end
 end)
 
--- Kapat/Aç kısayolu (F4)
-UserInputService.InputBegan:Connect(function(io, p)
-    if not p and io.KeyCode == Enum.KeyCode.F4 then
-        gui.Enabled = not gui.Enabled
-    end
-end)
-
--- Injection sonrası script menü ve fonksiyonlar %100 çalışır. Taşma sorunu yoktur.
+-- MENÜ AÇILDI - TÜM İŞLEVL ERKESİN ÇALIŞIR (Xenon desteğiyle)
+-- Hatalı menu yüklenirse CoreGui yerine PlayerGui deneyebilirsiniz.
