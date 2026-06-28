@@ -15,38 +15,39 @@ local menuPos = Vector2.new(300, 180)
 local menuSize = Vector2.new(300, 235)
 local dragging = false
 local dragOffset = Vector2.new()
+local espBoxes = {}
 
-local function isEnemy(plr)
-    if plr == LP then return false end
-    if plr.Team and LP.Team then
-        return plr.Team ~= LP.Team
+local function isEnemy(player)
+    if player == LP then return false end
+    if player.Team ~= nil and LP.Team ~= nil then
+        return player.Team ~= LP.Team
     end
     return true
 end
 
 local function getClosestEnemy()
-    local closestPlayer = nil
-    local minDist = math.huge
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if isEnemy(plr) and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local pos, vis = Camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
-            if vis then
-                local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(UIS:GetMouseLocation().X, UIS:GetMouseLocation().Y)).Magnitude
+    local mousePos = UIS:GetMouseLocation()
+    local minDist, closest = math.huge, nil
+    for _, player in ipairs(Players:GetPlayers()) do
+        if isEnemy(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, onscreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            if onscreen then
+                local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
                 if dist < minDist then
                     minDist = dist
-                    closestPlayer = plr
+                    closest = player
                 end
             end
         end
     end
-    return closestPlayer
+    return closest
 end
 
-local function aimAtTarget(target)
+local function aimAt(target)
     if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
-    local pos = target.Character.HumanoidRootPart.Position
-    local camPos = Camera.CFrame.Position
-    Camera.CFrame = CFrame.new(camPos, Vector3.new(pos.X, pos.Y, pos.Z))
+    local tPos = target.Character.HumanoidRootPart.Position
+    local cPos = Camera.CFrame.Position
+    Camera.CFrame = CFrame.new(cPos, Vector3.new(tPos.X, tPos.Y, tPos.Z))
 end
 
 local SilentAimTarget = nil
@@ -65,92 +66,66 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     return oldNamecall(self, ...)
 end)
 
-local BoxESP = {}
 local function clearESP()
-    for _, v in pairs(BoxESP) do
-        if v and v.Parent then
-            v:Destroy()
-        end
+    for _, v in pairs(espBoxes) do
+        if v and v.Parent then v:Destroy() end
     end
-    BoxESP = {}
+    espBoxes = {}
 end
 
-local function addESP(plr)
-    if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
-    local torso = plr.Character:FindFirstChild("UpperTorso") or plr.Character:FindFirstChild("Torso") or plr.Character:FindFirstChild("HumanoidRootPart")
-    local lLeg = plr.Character:FindFirstChild("LeftLowerLeg") or plr.Character:FindFirstChild("Left Leg")
-    local rLeg = plr.Character:FindFirstChild("RightLowerLeg") or plr.Character:FindFirstChild("Right Leg")
-    local bb = Instance.new("BillboardGui")
-    bb.AlwaysOnTop = true
-    bb.Adornee = torso
-    bb.Size = UDim2.new(0, 85, 0, 180)
-    bb.StudsOffset = Vector3.new(0,0,0)
-    bb.Parent = game:GetService("CoreGui")
-    local box = Instance.new("Frame", bb)
+local function createESPBox(part, size)
+    local gui = Instance.new("BillboardGui")
+    gui.Adornee = part
+    gui.Size = size
+    gui.AlwaysOnTop = true
+    gui.Parent = game:GetService("CoreGui")
+    local box = Instance.new("Frame", gui)
     box.Size = UDim2.new(1,0,1,0)
-    box.BackgroundTransparency = 0.7
     box.BorderSizePixel = 2
     box.BorderColor3 = Color3.fromRGB(255,0,0)
     box.BackgroundColor3 = Color3.fromRGB(255,0,0)
-    if lLeg then
-        local legESP = Instance.new("BillboardGui")
-        legESP.AlwaysOnTop = true
-        legESP.Adornee = lLeg
-        legESP.Size = UDim2.new(0, 24, 0, 55)
-        legESP.StudsOffset = Vector3.new(0,0,0)
-        legESP.Parent = game:GetService("CoreGui")
-        local legBox = Instance.new("Frame", legESP)
-        legBox.Size = UDim2.new(1,0,1,0)
-        legBox.BackgroundTransparency = 0.7
-        legBox.BorderSizePixel = 1
-        legBox.BorderColor3 = Color3.fromRGB(255,0,0)
-        legBox.BackgroundColor3 = Color3.fromRGB(255,0,0)
-        table.insert(BoxESP, legESP)
-    end
-    if rLeg then
-        local legESP = Instance.new("BillboardGui")
-        legESP.AlwaysOnTop = true
-        legESP.Adornee = rLeg
-        legESP.Size = UDim2.new(0, 24, 0, 55)
-        legESP.StudsOffset = Vector3.new(0,0,0)
-        legESP.Parent = game:GetService("CoreGui")
-        local legBox = Instance.new("Frame", legESP)
-        legBox.Size = UDim2.new(1,0,1,0)
-        legBox.BackgroundTransparency = 0.7
-        legBox.BorderSizePixel = 1
-        legBox.BorderColor3 = Color3.fromRGB(255,0,0)
-        legBox.BackgroundColor3 = Color3.fromRGB(255,0,0)
-        table.insert(BoxESP, legESP)
-    end
-    table.insert(BoxESP, bb)
+    box.BackgroundTransparency = 0.75
+    return gui
 end
 
-local function addAllESP()
+local function addESP(player)
+    if not player.Character then return end
+    if player.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = player.Character.HumanoidRootPart
+        local torso = player.Character:FindFirstChild("UpperTorso") or player.Character:FindFirstChild("Torso") or hrp
+        local box = createESPBox(torso, UDim2.new(0,85,0,120))
+        table.insert(espBoxes, box)
+        local leftLeg = player.Character:FindFirstChild("LeftLowerLeg") or player.Character:FindFirstChild("Left Leg")
+        local rightLeg = player.Character:FindFirstChild("RightLowerLeg") or player.Character:FindFirstChild("Right Leg")
+        if leftLeg then
+            local l = createESPBox(leftLeg, UDim2.new(0,24,0,55))
+            table.insert(espBoxes, l)
+        end
+        if rightLeg then
+            local r = createESPBox(rightLeg, UDim2.new(0,24,0,55))
+            table.insert(espBoxes, r)
+        end
+    end
+end
+
+local function updateESP()
     clearESP()
     if not cheats["ESP"] then return end
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if isEnemy(plr) then
-            addESP(plr)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if isEnemy(player) then
+            addESP(player)
         end
     end
 end
 
 Players.PlayerAdded:Connect(function(plr)
     plr.CharacterAdded:Connect(function()
-        addAllESP()
+        updateESP()
     end)
 end)
 Players.PlayerRemoving:Connect(function()
-    addAllESP()
+    updateESP()
 end)
-
-local function updateMenuColor(btn, enabled)
-    if enabled then
-        btn.BackgroundColor3 = Color3.fromRGB(65,65,65)
-    else
-        btn.BackgroundColor3 = Color3.fromRGB(20,20,20)
-    end
-end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "gene"
@@ -158,15 +133,15 @@ gui.Parent = game:GetService("CoreGui")
 gui.ResetOnSpawn = false
 
 local bg = Instance.new("Frame")
+bg.Name = "geneContainer"
 bg.Parent = gui
 bg.Size = UDim2.new(0, menuSize.X, 0, menuSize.Y)
 bg.Position = UDim2.new(0, menuPos.X, 0, menuPos.Y)
 bg.BackgroundColor3 = Color3.fromRGB(255,255,255)
 bg.BorderSizePixel = 2
-bg.BorderColor3 = Color3.fromRGB(10,10,10)
+bg.BorderColor3 = Color3.fromRGB(0,0,0)
 bg.Visible = menuOpen
 bg.Active = true
-bg.Draggable = false
 
 local topBar = Instance.new("Frame", bg)
 topBar.Size = UDim2.new(1,0,0,35)
@@ -183,26 +158,34 @@ title.TextColor3 = Color3.fromRGB(255,255,255)
 title.TextScaled = true
 title.BackgroundTransparency = 1
 
-local optionHeight = 50
-local optionPad = 12
+local optionHeight = 48
+local optionPad = 14
 
-local optionNames = {"Aimbot", "ESP", "SilentAim"}
-local optionDetails = {
-    ["Aimbot"] = "Düşmanlara otomatik hedef",
-    ["ESP"] = "Kırmızı karakter kasa ESP",
-    ["SilentAim"] = "Gizli otomatik ateş"
+local options = {"Aimbot", "ESP", "SilentAim"}
+local optionDescs = {
+    Aimbot = "Sadece düşmana kilitlenir",
+    ESP = "Kırmızı çizgi vücut-bacak",
+    SilentAim = "Susturulmuş otomatik nişan"
 }
 local currY = 38
 local buttons = {}
 
-for i, name in ipairs(optionNames) do
+local function updateMenuBtn(btn, enabled)
+    if enabled then
+        btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    else
+        btn.BackgroundColor3 = Color3.fromRGB(15,15,15)
+    end
+end
+
+for _, v in ipairs(options) do
     local btn = Instance.new("TextButton")
     btn.Parent = bg
-    btn.Name = name.."Btn"
+    btn.Name = v.."Btn"
     btn.Size = UDim2.new(0.75,0,0,optionHeight-10)
     btn.Position = UDim2.new(0.13,0,0, currY)
-    btn.BackgroundColor3 = Color3.fromRGB(20,20,20)
-    btn.Text = name
+    btn.BackgroundColor3 = Color3.fromRGB(15,15,15)
+    btn.Text = v
     btn.Font = Enum.Font.SourceSansBold
     btn.TextSize = 22
     btn.TextColor3 = Color3.fromRGB(255,255,255)
@@ -210,7 +193,7 @@ for i, name in ipairs(optionNames) do
     local desc = Instance.new("TextLabel", bg)
     desc.Size = UDim2.new(1, -45, 0, 16)
     desc.Position = UDim2.new(0.14,0,0,currY + 32)
-    desc.Text = optionDetails[name]
+    desc.Text = optionDescs[v]
     desc.TextColor3 = Color3.fromRGB(0,0,0)
     desc.Font = Enum.Font.SourceSans
     desc.TextSize = 16
@@ -218,14 +201,14 @@ for i, name in ipairs(optionNames) do
     desc.ZIndex = 2
     desc.TextXAlignment = Enum.TextXAlignment.Left
     btn.MouseButton1Click:Connect(function()
-        cheats[name] = not cheats[name]
-        updateMenuColor(btn, cheats[name])
-        if name == "ESP" then
-            addAllESP()
+        cheats[v] = not cheats[v]
+        updateMenuBtn(btn, cheats[v])
+        if v == "ESP" then
+            updateESP()
         end
     end)
-    updateMenuColor(btn, cheats[name])
-    buttons[name] = btn
+    updateMenuBtn(btn, cheats[v])
+    buttons[v] = btn
     currY = currY + optionHeight
 end
 
@@ -260,7 +243,7 @@ RS.RenderStepped:Connect(function()
     if cheats["Aimbot"] then
         local tgt = getClosestEnemy()
         if tgt then
-            aimAtTarget(tgt)
+            aimAt(tgt)
         end
     end
     if cheats["SilentAim"] then
@@ -270,4 +253,4 @@ RS.RenderStepped:Connect(function()
     end
 end)
 
-addAllESP()
+updateESP()
