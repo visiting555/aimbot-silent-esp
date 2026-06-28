@@ -1,127 +1,326 @@
-// Roblox eğitim amaçlı script, modern menü, dolu fonksiyonlar ile aimbot, fly ve noclip.
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Drawing = Drawing
 
-// MODERN GUI OLUŞTUR
-local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local UICorner = Instance.new("UICorner")
-local Title = Instance.new("TextLabel")
-local AimbotButton = Instance.new("TextButton")
-local FlyButton = Instance.new("TextButton")
-local NoclipButton = Instance.new("TextButton")
-local CloseButton = Instance.new("TextButton")
+local FOV = 100
+local AimbotActive = false
+local ESPActive = false
+local SilentAimActive = false
+local MenuOpen = true
 
-ScreenGui.Name = "EgitimGui"
-ScreenGui.Parent = game.CoreGui
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
-MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.3, 0, 0.25, 0)
-MainFrame.Size = UDim2.new(0, 300, 0, 350)
-
-UICorner.CornerRadius = UDim.new(0, 12)
-UICorner.Parent = MainFrame
-
-Title.Parent = MainFrame
-Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-Title.BackgroundTransparency = 1
-Title.Position = UDim2.new(0, 0, 0, 8)
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Font = Enum.Font.GothamBold
-Title.Text = "Eğitim Hilesi"
-Title.TextColor3 = Color3.fromRGB(85, 170, 255)
-Title.TextScaled = true
-
-local function StyleButton(button, pos, text)
-    button.Parent = MainFrame
-    button.BackgroundColor3 = Color3.fromRGB(41, 41, 41)
-    button.Position = pos
-    button.Size = UDim2.new(0, 240, 0, 44)
-    button.Font = Enum.Font.Gotham
-    button.Text = text
-    button.TextColor3 = Color3.fromRGB(230, 230, 230)
-    button.TextScaled = true
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = button
+if game.CoreGui:FindFirstChild("SimpleAimbotMenu") then
+    game.CoreGui.SimpleAimbotMenu:Destroy()
 end
 
-StyleButton(AimbotButton, UDim2.new(0, 30, 0, 60), "Aimbot Aç/Kapa")
-StyleButton(FlyButton,   UDim2.new(0, 30, 0, 120), "Fly Aç/Kapa")
-StyleButton(NoclipButton,UDim2.new(0, 30, 0, 180), "Noclip Aç/Kapa")
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SimpleAimbotMenu"
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.ResetOnSpawn = false
 
-CloseButton.Parent = MainFrame
-CloseButton.BackgroundColor3 = Color3.fromRGB(255,64,64)
-CloseButton.Position = UDim2.new(1, -40, 0, 10)
-CloseButton.Size = UDim2.new(0, 30, 0, 30)
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextScaled = true
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 10)
-closeCorner.Parent = CloseButton
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 350, 0, 185)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -92)
+MainFrame.BackgroundColor3 = Color3.new(1,1,1)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+MainFrame.Visible = true
+MainFrame.Active = true
+MainFrame.Draggable = true
 
--- Menüyü Sürüklenebilir yap
-local dragging
-local dragInput
-local dragStart
-local startPos
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.Size = UDim2.new(1, 0, 0, 36)
+Title.Font = Enum.Font.GothamBlack
+Title.TextColor3 = Color3.new(1,1,1)
+Title.TextSize = 23
+Title.Text = "Aimbot - ESP - SilentAim"
+Title.TextStrokeTransparency = 0.4
+Title.BackgroundColor3 = Color3.new(0,0,0)
 
-MainFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = input.Position
-		startPos = MainFrame.Position
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
-	end
+local function SectionLabel(text, pos)
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = MainFrame
+    lbl.BackgroundTransparency = 1
+    lbl.Position = UDim2.new(0, 10, 0, pos)
+    lbl.Size = UDim2.new(1, -20, 0, 22)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextColor3 = Color3.new(1,1,1)
+    lbl.TextStrokeTransparency = 0.7
+    lbl.TextSize = 18
+    lbl.Text = text
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    return lbl
+end
+
+local ButtonY = 0
+local function MenuToggle(name, getfn, setfn)
+    ButtonY = ButtonY + 1
+    local btn = Instance.new("TextButton")
+    btn.Parent = MainFrame
+    btn.Size = UDim2.new(0, 260, 0, 30)
+    btn.Position = UDim2.new(0, 40, 0, 25 + ButtonY*34)
+    btn.BackgroundColor3 = Color3.new(0,0,0)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 17
+    btn.BorderSizePixel = 0
+    btn.Text = name .. " [" .. (getfn() and "AÇIK" or "KAPALI") .. "]"
+    btn.AutoButtonColor = true
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.MouseButton1Click:Connect(function()
+        setfn(not getfn())
+        btn.Text = name .. " [" .. (getfn() and "AÇIK" or "KAPALI") .. "]"
+    end)
+    return btn
+end
+
+local function MenuSlider(name, getfn, setfn, min, max)
+    ButtonY = ButtonY + 1
+    local lb = Instance.new("TextLabel")
+    lb.Parent = MainFrame
+    lb.BackgroundTransparency = 1
+    lb.Size = UDim2.new(0,110,0,30)
+    lb.Position = UDim2.new(0, 40, 0, 25 + ButtonY*34)
+    lb.Text = name..": "..tostring(getfn())
+    lb.TextColor3 = Color3.new(1,1,1)
+    lb.Font = Enum.Font.GothamBold
+    lb.TextSize = 17
+    lb.TextXAlignment = Enum.TextXAlignment.Left
+    lb.BorderSizePixel = 0
+
+    local box = Instance.new("TextBox")
+    box.Parent = MainFrame
+    box.Size = UDim2.new(0, 46, 0, 24)
+    box.Position = UDim2.new(0, 182, 0, 28 + ButtonY*34)
+    box.Text = tostring(getfn())
+    box.Font = Enum.Font.GothamBold
+    box.TextSize = 15
+    box.TextColor3 = Color3.new(1,1,1)
+    box.BackgroundColor3 = Color3.new(0,0,0)
+    box.BorderSizePixel = 0
+    box.ClearTextOnFocus = true
+    box.TextXAlignment = Enum.TextXAlignment.Center
+
+    box.FocusLost:Connect(function()
+        local v = tonumber(box.Text)
+        if v and v >= min and v <= max then
+            setfn(v)
+            lb.Text = name..": "..v
+        else
+            box.Text = tostring(getfn())
+        end
+    end)
+end
+
+SectionLabel("ANA HILE OZELLIKLER", 38)
+MenuToggle("Aimbot", function() return AimbotActive end, function(v) AimbotActive = v end)
+MenuToggle("ESP", function() return ESPActive end, function(v) ESPActive = v end)
+MenuToggle("Silent Aim", function() return SilentAimActive end, function(v) SilentAimActive = v end)
+MenuSlider("FOV", function() return FOV end, function(v) FOV = v end, 20, 400)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if input.KeyCode == Enum.KeyCode.F and not gp then
+        MenuOpen = not MenuOpen
+        MainFrame.Visible = MenuOpen
+    end
 end)
-MainFrame.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement then
-		dragInput = input
-	end
+
+if not _G.__SIMPLE_ESP then _G.__SIMPLE_ESP = {} end
+
+local function getScreen(pos)
+    local p,vis = Camera:WorldToViewportPoint(pos)
+    return Vector2.new(p.X, p.Y), vis
+end
+
+local BOX_SIZE = Vector2.new(30, 55)
+local HEAD_RADIUS = 7
+
+function ESP_Box(player)
+    if player == LocalPlayer then return end
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Head") then return end
+
+    local box = Drawing.new("Square")
+    box.Color = Color3.new(1,1,1)
+    box.Thickness = 2
+    box.Filled = false
+    box.Size = BOX_SIZE
+    box.Transparency = 1
+
+    local circle = Drawing.new("Circle")
+    circle.Color = Color3.new(1,1,1)
+    circle.Thickness = 2
+    circle.Filled = false
+    circle.Transparency = 1
+    circle.Radius = HEAD_RADIUS
+
+    local skel = {
+        torso = Drawing.new("Line"),
+        leftLeg = Drawing.new("Line"),
+        rightLeg = Drawing.new("Line"),
+        leftArm = Drawing.new("Line"),
+        rightArm = Drawing.new("Line")
+    }
+    for _, line in pairs(skel) do
+        line.Color = Color3.new(1,1,1)
+        line.Thickness = 2
+        line.Transparency = 1
+    end
+
+    local function update()
+        local c = player.Character
+        if not ESPActive or not c or not c:FindFirstChild("HumanoidRootPart") or not c:FindFirstChild("Head") then
+            box.Visible = false
+            circle.Visible = false
+            for _,l in pairs(skel) do l.Visible = false end
+            return
+        end
+
+        local hrp = c:FindFirstChild("HumanoidRootPart")
+        local head = c:FindFirstChild("Head")
+
+        local rootPos, rootVis = getScreen(hrp.Position)
+        local headPos, headVis = getScreen(head.Position)
+        if rootVis and headVis then
+            box.Position = Vector2.new(rootPos.X - BOX_SIZE.X/2, rootPos.Y - 27)
+            box.Size = BOX_SIZE
+            box.Color = Color3.new(1,1,1)
+            box.Visible = true
+
+            circle.Position = Vector2.new(headPos.X, headPos.Y)
+            circle.Radius = HEAD_RADIUS
+            circle.Color = Color3.new(1,1,1)
+            circle.Visible = true
+
+            local function sfind(n) return c:FindFirstChild(n) end
+            local lh = sfind("LeftHand") or sfind("Left Arm")
+            local rh = sfind("RightHand") or sfind("Right Arm")
+            local ll = sfind("LeftFoot") or sfind("Left Leg")
+            local rl = sfind("RightFoot") or sfind("Right Leg")
+            local ut = sfind("UpperTorso") or sfind("Torso")
+            local lt = sfind("LowerTorso") or ut
+
+            if ut then
+                local utPos = select(1, getScreen(ut.Position))
+                skel.torso.From = Vector2.new(headPos.X, headPos.Y+HEAD_RADIUS)
+                skel.torso.To = utPos
+                skel.torso.Visible = true
+            else
+                skel.torso.Visible = false
+            end
+            if ut and ll then
+                skel.leftLeg.From = select(1, getScreen(ut.Position))
+                skel.leftLeg.To = select(1, getScreen(ll.Position))
+                skel.leftLeg.Visible = true
+            else
+                skel.leftLeg.Visible = false
+            end
+            if ut and rl then
+                skel.rightLeg.From = select(1, getScreen(ut.Position))
+                skel.rightLeg.To = select(1, getScreen(rl.Position))
+                skel.rightLeg.Visible = true
+            else
+                skel.rightLeg.Visible = false
+            end
+            if ut and lh then
+                skel.leftArm.From = select(1, getScreen(ut.Position))
+                skel.leftArm.To = select(1, getScreen(lh.Position))
+                skel.leftArm.Visible = true
+            else
+                skel.leftArm.Visible = false
+            end
+            if ut and rh then
+                skel.rightArm.From = select(1, getScreen(ut.Position))
+                skel.rightArm.To = select(1, getScreen(rh.Position))
+                skel.rightArm.Visible = true
+            else
+                skel.rightArm.Visible = false
+            end
+        else
+            box.Visible = false
+            circle.Visible = false
+            for _,l in pairs(skel) do l.Visible = false end
+        end
+    end
+
+    local rscon = RunService.RenderStepped:Connect(update)
+    return {
+        remove = function()
+            pcall(function() box:Remove() circle:Remove() end)
+            for _,l in pairs(skel) do pcall(function() l:Remove() end) end
+            if rscon then rscon:Disconnect() end
+        end
+    }
+end
+
+Players.PlayerAdded:Connect(function(plr)
+    wait(1)
+    if ESPActive then _G.__SIMPLE_ESP[plr] = ESP_Box(plr) end
 end)
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-	if input == dragInput and dragging then
-		local delta = input.Position - dragStart
-		MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	end
+Players.PlayerRemoving:Connect(function(plr)
+    if _G.__SIMPLE_ESP[plr] then _G.__SIMPLE_ESP[plr].remove() end
+    _G.__SIMPLE_ESP[plr] = nil
 end)
 
-CloseButton.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
+RunService.RenderStepped:Connect(function()
+    if ESPActive then
+        for _,plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character and not _G.__SIMPLE_ESP[plr] then
+                _G.__SIMPLE_ESP[plr]=ESP_Box(plr)
+            end
+        end
+    else
+        for _,tbl in pairs(_G.__SIMPLE_ESP) do
+            if tbl and tbl.remove then tbl.remove() end
+        end
+        _G.__SIMPLE_ESP = {}
+    end
 end)
 
--- FONKSİYONLAR
-local plr = game.Players.LocalPlayer
-local aimbotActive = false
-local flyActive = false
-local noclipActive = false
-local connectionAimbot = nil
-local connectionNoclip = nil
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Color = Color3.fromRGB(0,170,255)
+FOVCircle.Thickness = 2
+FOVCircle.NumSides = 100
+FOVCircle.Radius = FOV
+FOVCircle.Filled = false
+FOVCircle.Visible = true
 
--- AIMBOT
-local function getClosestPlayer()
-    local mouse = plr:GetMouse()
-    local shortestDist = math.huge
-    local closest = nil
-    for _, v in ipairs(game.Players:GetPlayers()) do
-        if v ~= plr and v.Character and v.Character:FindFirstChild("Head") then
-            local headPos = v.Character.Head.Position
-            local vector, onScreen = workspace.CurrentCamera:WorldToScreenPoint(headPos)
-            if onScreen then
-                local dist = (Vector2.new(vector.X, vector.Y) - Vector2.new(mouse.X, mouse.Y)).magnitude
-                if dist < shortestDist then
-                    shortestDist = dist
-                    closest = v
+RunService.RenderStepped:Connect(function()
+    if MainFrame and MainFrame.Visible then
+        FOVCircle.Visible = false
+    else
+        FOVCircle.Visible = (AimbotActive or SilentAimActive)
+        FOVCircle.Position = Vector2.new(Mouse.X,Mouse.Y+36)
+        FOVCircle.Radius = FOV
+    end
+end)
+
+local function isEnemy(target)
+    local myTeam = LocalPlayer.Team
+    local theirTeam = target.Team
+    return myTeam == nil or theirTeam == nil or myTeam ~= theirTeam
+end
+
+local function getClosestEnemyToCursor()
+    local closest,cldist = nil,FOV
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and isEnemy(plr) and plr.Character and plr.Character:FindFirstChild("Head") then
+            local h = plr.Character:FindFirstChild("Head")
+            local humanoid = plr.Character:FindFirstChildWhichIsA("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local pos,vis = Camera:WorldToViewportPoint(h.Position)
+                if vis then
+                    local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                    if dist < cldist then
+                        cldist = dist
+                        closest = plr
+                    end
                 end
             end
         end
@@ -129,148 +328,31 @@ local function getClosestPlayer()
     return closest
 end
 
-local function aimAt(target)
-    local camera = workspace.CurrentCamera
-    if not target or not target.Character or not target.Character:FindFirstChild("Head") then return end
-    local head = target.Character.Head.Position
-    camera.CFrame = CFrame.new(camera.CFrame.Position, head)
-end
-
-local function enableAimbot()
-    if connectionAimbot then connectionAimbot:Disconnect() end
-    connectionAimbot = game:GetService("RunService").RenderStepped:Connect(function()
-        if aimbotActive then
-            local target = getClosestPlayer()
-            if target then
-                aimAt(target)
-            end
+RunService.RenderStepped:Connect(function()
+    if AimbotActive and not MenuOpen then
+        local target = getClosestEnemyToCursor()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
         end
-    end)
-end
-
-local function disableAimbot()
-    if connectionAimbot then connectionAimbot:Disconnect() end
-    connectionAimbot = nil
-end
-
-AimbotButton.MouseButton1Click:Connect(function()
-    aimbotActive = not aimbotActive
-    if aimbotActive then
-        enableAimbot()
-        AimbotButton.Text = "Aimbot KAPAT"
-    else
-        disableAimbot()
-        AimbotButton.Text = "Aimbot AÇ"
     end
 end)
 
--- FLY
-local flySpeed = 50
-local flyConn = nil
-function enableFly()
-    if flyConn then flyConn:Disconnect() end
-    local char = plr.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-    local UserInputService = game:GetService("UserInputService")
-    local velocity = Instance.new("BodyVelocity", hrp)
-    velocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    local flyDir = Vector3.new()
-
-    flyConn = game:GetService("RunService").Heartbeat:Connect(function()
-        if not flyActive or not char or not char:FindFirstChild("HumanoidRootPart") then
-            velocity:Destroy()
-            flyConn:Disconnect()
-            return
-        end
-
-        flyDir = Vector3.new()
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-            flyDir = flyDir + (workspace.CurrentCamera.CFrame.LookVector)
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-            flyDir = flyDir - (workspace.CurrentCamera.CFrame.LookVector)
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-            flyDir = flyDir - (workspace.CurrentCamera.CFrame.RightVector)
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-            flyDir = flyDir + (workspace.CurrentCamera.CFrame.RightVector)
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-            flyDir = flyDir + Vector3.new(0,1,0)
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-            flyDir = flyDir - Vector3.new(0,1,0)
-        end
-        velocity.Velocity = flyDir.Unit * flySpeed
-        if flyDir.Magnitude == 0 then
-            velocity.Velocity = Vector3.new()
-        end
-    end)
-end
-
-function disableFly()
-    flyActive = false
-    if flyConn then
-        flyConn:Disconnect()
-        flyConn = nil
-    end
-    local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        for _,v in ipairs(hrp:GetChildren()) do
-            if v:IsA("BodyVelocity") then v:Destroy() end
-        end
-    end
-end
-
-FlyButton.MouseButton1Click:Connect(function()
-    flyActive = not flyActive
-    if flyActive then
-        enableFly()
-        FlyButton.Text = "Fly KAPAT"
-    else
-        disableFly()
-        FlyButton.Text = "Fly AÇ"
-    end
-end)
-
--- NOCLIP
-function enableNoclip()
-    if connectionNoclip then connectionNoclip:Disconnect() end
-    connectionNoclip = game:GetService("RunService").Stepped:Connect(function()
-        if noclipActive and plr.Character then
-            for _, part in pairs(plr.Character:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide == true then
-                    part.CanCollide = false
-                end
+local success, rawmet = pcall(getrawmetatable, game)
+if success then
+    local __namecall = rawmet.__namecall
+    setreadonly(rawmet, false)
+    rawmet.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        if SilentAimActive and tostring(method)=="FindPartOnRayWithIgnoreList" then
+            local target = getClosestEnemyToCursor()
+            if target and target.Character and target.Character:FindFirstChild("Head") then
+                local args = {...}
+                args[1].Origin = Camera.CFrame.Position
+                args[1].Direction = (target.Character.Head.Position - Camera.CFrame.Position).Unit * 999
+                return __namecall(self, unpack(args))
             end
         end
+        return __namecall(self, ...)
     end)
+    setreadonly(rawmet, true)
 end
-
-function disableNoclip()
-    noclipActive = false
-    if connectionNoclip then
-        connectionNoclip:Disconnect()
-        connectionNoclip = nil
-    end
-    if plr.Character then
-        for _, part in pairs(plr.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
-        end
-    end
-end
-
-NoclipButton.MouseButton1Click:Connect(function()
-    noclipActive = not noclipActive
-    if noclipActive then
-        enableNoclip()
-        NoclipButton.Text = "Noclip KAPAT"
-    else
-        disableNoclip()
-        NoclipButton.Text = "Noclip AÇ"
-    end
-end)
