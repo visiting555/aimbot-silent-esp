@@ -4,26 +4,28 @@ local Mouse = LocalPlayer:GetMouse()
 local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-
+local Teams = game:GetService("Teams")
 local Drawing = Drawing
-local FOV = 110
+
+local FOV = 100
 local AimbotActive = false
 local ESPActive = false
 local SilentAimActive = false
-local AimPart = "Head"
 local MenuOpen = true
+local AimPart = "Head"
 
-if game.CoreGui:FindFirstChild("CrossUniversalMenu") then
-    game.CoreGui.CrossUniversalMenu:Destroy()
+if game.CoreGui:FindFirstChild("SimpleAimbotMenu") then
+    game.CoreGui.SimpleAimbotMenu:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CrossUniversalMenu"
+ScreenGui.Name = "SimpleAimbotMenu"
 ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 340, 0, 215)
-MainFrame.Position = UDim2.new(0.5, -170, 0.5, -110)
+MainFrame.Size = UDim2.new(0, 350, 0, 185)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -92)
 MainFrame.BackgroundColor3 = Color3.new(1,1,1)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
@@ -32,7 +34,6 @@ MainFrame.Active = true
 MainFrame.Draggable = true
 
 local Title = Instance.new("TextLabel")
-Title.Name = "Title"
 Title.Parent = MainFrame
 Title.BackgroundTransparency = 1
 Title.Position = UDim2.new(0, 0, 0, 0)
@@ -40,22 +41,23 @@ Title.Size = UDim2.new(1, 0, 0, 36)
 Title.Font = Enum.Font.GothamBlack
 Title.TextColor3 = Color3.new(1,1,1)
 Title.TextSize = 23
-Title.Text = "Aimbot - ESP - SilentAim Menu"
+Title.Text = "Aimbot - ESP - SilentAim"
 Title.TextStrokeTransparency = 0.4
 Title.BackgroundColor3 = Color3.new(0,0,0)
 
-local function SectionLabel(text, order)
-    local l = Instance.new("TextLabel")
-    l.Parent = MainFrame
-    l.BackgroundTransparency = 1
-    l.Position = UDim2.new(0, 16, 0, 38 + order*37)
-    l.Size = UDim2.new(1, -32, 0, 26)
-    l.Font = Enum.Font.GothamBold
-    l.TextColor3 = Color3.new(1,1,1)
-    l.TextSize = 19
-    l.TextXAlignment = Enum.TextXAlignment.Left
-    l.Text = text
-    return l
+local function SectionLabel(text, pos)
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = MainFrame
+    lbl.BackgroundTransparency = 1
+    lbl.Position = UDim2.new(0, 10, 0, pos)
+    lbl.Size = UDim2.new(1, -20, 0, 22)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextColor3 = Color3.new(0,0,0)
+    lbl.TextStrokeTransparency = 0.7
+    lbl.TextSize = 18
+    lbl.Text = text
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    return lbl
 end
 
 local ButtonY = 0
@@ -64,11 +66,11 @@ local function MenuToggle(name, getfn, setfn)
     local btn = Instance.new("TextButton")
     btn.Parent = MainFrame
     btn.Size = UDim2.new(0, 260, 0, 30)
-    btn.Position = UDim2.new(0, 22, 0, 38 + ButtonY*37)
+    btn.Position = UDim2.new(0, 40, 0, 25 + ButtonY*34)
     btn.BackgroundColor3 = Color3.new(0,0,0)
     btn.TextColor3 = Color3.new(1,1,1)
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 18
+    btn.TextSize = 17
     btn.BorderSizePixel = 0
     btn.Text = name .. " [" .. (getfn() and "AÇIK" or "KAPALI") .. "]"
     btn.AutoButtonColor = true
@@ -86,18 +88,18 @@ local function MenuSlider(name, getfn, setfn, min, max)
     lb.Parent = MainFrame
     lb.BackgroundTransparency = 1
     lb.Size = UDim2.new(0,110,0,30)
-    lb.Position = UDim2.new(0, 22, 0, 38 + ButtonY*37)
+    lb.Position = UDim2.new(0, 40, 0, 25 + ButtonY*34)
     lb.Text = name..": "..tostring(getfn())
-    lb.TextColor3 = Color3.new(1,1,1)
+    lb.TextColor3 = Color3.new(0,0,0)
     lb.Font = Enum.Font.GothamBold
-    lb.TextSize = 18
+    lb.TextSize = 17
     lb.TextXAlignment = Enum.TextXAlignment.Left
     lb.BorderSizePixel = 0
 
     local box = Instance.new("TextBox")
     box.Parent = MainFrame
     box.Size = UDim2.new(0, 46, 0, 24)
-    box.Position = UDim2.new(0, 156, 0, 41 + ButtonY*37)
+    box.Position = UDim2.new(0, 182, 0, 28 + ButtonY*34)
     box.Text = tostring(getfn())
     box.Font = Enum.Font.GothamBold
     box.TextSize = 15
@@ -118,37 +120,11 @@ local function MenuSlider(name, getfn, setfn, min, max)
     end)
 end
 
-local aimparts = {"Head", "UpperTorso", "LowerTorso"}
-local apidx = 1
-local function MenuButton(name, callback)
-    ButtonY = ButtonY + 1
-    local btn = Instance.new("TextButton")
-    btn.Parent = MainFrame
-    btn.Size = UDim2.new(0, 260, 0, 30)
-    btn.Position = UDim2.new(0, 22, 0, 38 + ButtonY*37)
-    btn.BackgroundColor3 = Color3.new(0,0,0)
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 18
-    btn.BorderSizePixel = 0
-    btn.Text = name
-    btn.AutoButtonColor = true
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.MouseButton1Click:Connect(callback)
-    return btn
-end
-
-SectionLabel("Ana Hileler", 0)
+SectionLabel("Ana Özellikler", 38)
 MenuToggle("Aimbot", function() return AimbotActive end, function(v) AimbotActive = v end)
 MenuToggle("ESP", function() return ESPActive end, function(v) ESPActive = v end)
 MenuToggle("Silent Aim", function() return SilentAimActive end, function(v) SilentAimActive = v end)
 MenuSlider("FOV", function() return FOV end, function(v) FOV = v end, 20, 300)
-
-MenuButton("Aim Yeri: "..aimparts[apidx], function()
-    apidx = (apidx % #aimparts) + 1
-    AimPart = aimparts[apidx]
-    MenuButton("Aim Yeri: "..AimPart, function() end)
-end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.F and not gameProcessed then
@@ -157,31 +133,35 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-if (not _G.__CROSS__ESP) then _G.__CROSS__ESP = {} end
+if not _G.__SIMPLE_ESP then _G.__SIMPLE_ESP = {} end
+
 local function getScreen(pos)
     local p,vis = Camera:WorldToViewportPoint(pos)
-    return Vector2.new(p.X,p.Y),vis
+    return Vector2.new(p.X, p.Y), vis
 end
+
+local BOX_SIZE = Vector2.new(33, 59) -- Bacon SPec, sabit
+local HEAD_RADIUS = 8 -- Sabit, tam kafa hizasinda, bacon gibi
 
 function ESP_Box(player)
     if player == LocalPlayer then return end
     local char = player.Character
-    if not char then return end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local head = char:FindFirstChild("Head")
-    if not root or not head then return end
+    if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Head") then return end
+
     local box = Drawing.new("Square")
-    box.Color = Color3.fromRGB(0,0,0)
+    box.Color = Color3.new(1,1,1)
     box.Thickness = 2
-    box.Size = Vector2.new(24,54)
     box.Filled = false
+    box.Size = BOX_SIZE
     box.Transparency = 1
+
     local circle = Drawing.new("Circle")
-    circle.Color = Color3.fromRGB(255,255,255)
+    circle.Color = Color3.new(1,1,1)
     circle.Thickness = 2
     circle.Filled = false
-    circle.Radius = 7
     circle.Transparency = 1
+    circle.Radius = HEAD_RADIUS
+
     local skel = {
         torso = Drawing.new("Line"),
         leftLeg = Drawing.new("Line"),
@@ -190,90 +170,131 @@ function ESP_Box(player)
         rightArm = Drawing.new("Line")
     }
     for _, line in pairs(skel) do
-        line.Color = Color3.fromRGB(255,255,255) 
+        line.Color = Color3.new(1,1,1)
         line.Thickness = 2
         line.Transparency = 1
     end
-    local con
-    con = RunService.RenderStepped:Connect(function()
-        if not ESPActive or not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-            box.Visible = false circle.Visible = false
-            for _,l in pairs(skel) do l.Visible=false end
+
+    local function update()
+        local c = player.Character
+        if not ESPActive or not c or not c:FindFirstChild("HumanoidRootPart") or not c:FindFirstChild("Head") then
+            box.Visible = false
+            circle.Visible = false
+            for _,l in pairs(skel) do l.Visible = false end
             return
         end
-        local c = player.Character
+
         local hrp = c:FindFirstChild("HumanoidRootPart")
-        local hd = c:FindFirstChild("Head")
-        local ll = c:FindFirstChild("Left Leg") or c:FindFirstChild("LeftFoot")
-        local rl = c:FindFirstChild("Right Leg") or c:FindFirstChild("RightFoot")
-        local la = c:FindFirstChild("Left Arm") or c:FindFirstChild("LeftHand")
-        local ra = c:FindFirstChild("Right Arm") or c:FindFirstChild("RightHand")
-        local tor = c:FindFirstChild("Torso") or c:FindFirstChild("UpperTorso")
-        if hrp and hd then
-            local basePos, vis1 = getScreen(hrp.Position + Vector3.new(0,1,0))
-            box.Size = Vector2.new(24,54)
-            box.Position = Vector2.new(basePos.X-12, basePos.Y-20)
+        local head = c:FindFirstChild("Head")
+
+        -- Her zaman sabit kutu ve sabit baş çemberi
+        local rootPos, rootVis = getScreen(hrp.Position)
+        local headPos, headVis = getScreen(head.Position)
+        if rootVis and headVis then
+            -- Box baş-hizalı, body-her zaman sabit boyut, bacon gibi
+            box.Position = Vector2.new(rootPos.X - BOX_SIZE.X/2, rootPos.Y - 33)
+            box.Size = BOX_SIZE
+            box.Color = Color3.new(1,1,1)
             box.Visible = true
 
-            local headPos, vis2 = getScreen(hd.Position)
+            -- Head circle tam kafada ve sabit küçük çapta
             circle.Position = Vector2.new(headPos.X, headPos.Y)
+            circle.Radius = HEAD_RADIUS
+            circle.Color = Color3.new(1,1,1)
             circle.Visible = true
 
-            local torsoPos = tor and select(1,getScreen(tor.Position)) or basePos
-            local llPos = ll and select(1,getScreen(ll.Position)) or basePos
-            local rlPos = rl and select(1,getScreen(rl.Position)) or basePos
-            local laPos = la and select(1,getScreen(la.Position)) or basePos
-            local raPos = ra and select(1,getScreen(ra.Position)) or basePos
+            -- Skel positions
+            local function sfind(n)
+                return c:FindFirstChild(n)
+            end
+            local lh = sfind("LeftHand") or sfind("Left Arm")
+            local rh = sfind("RightHand") or sfind("Right Arm")
+            local ll = sfind("LeftFoot") or sfind("Left Leg")
+            local rl = sfind("RightFoot") or sfind("Right Leg")
+            local ut = sfind("UpperTorso") or sfind("Torso")
+            local lt = sfind("LowerTorso") or ut
 
-            skel.torso.From = Vector2.new(headPos.X, headPos.Y + 7)
-            skel.torso.To = torsoPos
-            skel.leftLeg.From = torsoPos
-            skel.leftLeg.To = llPos
-            skel.rightLeg.From = torsoPos
-            skel.rightLeg.To = rlPos
-            skel.leftArm.From = torsoPos
-            skel.leftArm.To = laPos
-            skel.rightArm.From = torsoPos
-            skel.rightArm.To = raPos
-            for _,l in pairs(skel) do l.Visible=true end
+            -- Torso çizgisi (kafadan üst vücuda)
+            if ut then
+                local utPos = select(1, getScreen(ut.Position))
+                skel.torso.From = Vector2.new(headPos.X, headPos.Y+HEAD_RADIUS)
+                skel.torso.To = utPos
+                skel.torso.Visible = true
+            else
+                skel.torso.Visible = false
+            end
+
+            if ut and ll then
+                skel.leftLeg.From = select(1, getScreen(ut.Position))
+                skel.leftLeg.To = select(1, getScreen(ll.Position))
+                skel.leftLeg.Visible = true
+            else
+                skel.leftLeg.Visible = false
+            end
+
+            if ut and rl then
+                skel.rightLeg.From = select(1, getScreen(ut.Position))
+                skel.rightLeg.To = select(1, getScreen(rl.Position))
+                skel.rightLeg.Visible = true
+            else
+                skel.rightLeg.Visible = false
+            end
+
+            if ut and lh then
+                skel.leftArm.From = select(1, getScreen(ut.Position))
+                skel.leftArm.To = select(1, getScreen(lh.Position))
+                skel.leftArm.Visible = true
+            else
+                skel.leftArm.Visible = false
+            end
+
+            if ut and rh then
+                skel.rightArm.From = select(1, getScreen(ut.Position))
+                skel.rightArm.To = select(1, getScreen(rh.Position))
+                skel.rightArm.Visible = true
+            else
+                skel.rightArm.Visible = false
+            end
         else
-            box.Visible = false circle.Visible = false
-            for _,l in pairs(skel) do l.Visible=false end
+            box.Visible = false
+            circle.Visible = false
+            for _,l in pairs(skel) do l.Visible = false end
         end
-    end)
+    end
+
+    local rscon = RunService.RenderStepped:Connect(update)
     return {
         remove = function()
             pcall(function() box:Remove() circle:Remove() end)
             for _,l in pairs(skel) do pcall(function() l:Remove() end) end
-            if con then con:Disconnect() end
+            if rscon then rscon:Disconnect() end
         end
     }
 end
 
-Players.PlayerAdded:Connect(function(p)
+Players.PlayerAdded:Connect(function(plr)
     wait(1)
     if ESPActive then
-        _G.__CROSS__ESP[p] = ESP_Box(p)
+        _G.__SIMPLE_ESP[plr] = ESP_Box(plr)
     end
 end)
-Players.PlayerRemoving:Connect(function(p)
-    if _G.__CROSS__ESP[p] then _G.__CROSS__ESP[p].remove() end
-    _G.__CROSS__ESP[p] = nil
+Players.PlayerRemoving:Connect(function(plr)
+    if _G.__SIMPLE_ESP[plr] then _G.__SIMPLE_ESP[plr].remove() end
+    _G.__SIMPLE_ESP[plr] = nil
 end)
+
 RunService.RenderStepped:Connect(function()
     if ESPActive then
-        for _,plr in pairs(Players:GetPlayers()) do
-            if plr~=LocalPlayer and not _G.__CROSS__ESP[plr] then
-                _G.__CROSS__ESP[plr]=ESP_Box(plr)
+        for _,plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character and not _G.__SIMPLE_ESP[plr] then
+                _G.__SIMPLE_ESP[plr]=ESP_Box(plr)
             end
         end
     else
-        for _,esptable in pairs(_G.__CROSS__ESP) do
-            if esptable and esptable.remove then
-                esptable.remove()
-            end
+        for _,tbl in pairs(_G.__SIMPLE_ESP) do
+            if tbl and tbl.remove then tbl.remove() end
         end
-        _G.__CROSS__ESP = {}
+        _G.__SIMPLE_ESP = {}
     end
 end)
 
@@ -289,22 +310,33 @@ RunService.RenderStepped:Connect(function()
     if MainFrame and MainFrame.Visible then
         FOVCircle.Visible = false
     else
-        FOVCircle.Visible = AimbotActive or SilentAimActive
+        FOVCircle.Visible = (AimbotActive or SilentAimActive)
         FOVCircle.Position = Vector2.new(Mouse.X,Mouse.Y+36)
         FOVCircle.Radius = FOV
     end
 end)
 
-local function getClosestPlayerToCursor()
+-- Takım kontrolü: Sadece düşmanlar!
+local function isEnemy(target)
+    local myTeam = LocalPlayer.Team
+    local theirTeam = target.Team
+    return myTeam == nil or theirTeam == nil or myTeam ~= theirTeam
+end
+
+local function getClosestEnemyToCursor()
     local closest,cldist = nil,FOV
-    for _,p in pairs(Players:GetPlayers()) do
-        if p~=LocalPlayer and p.Character and p.Character:FindFirstChild(AimPart) and p.Character:FindFirstChildWhichIsA("Humanoid") and p.Character:FindFirstChildWhichIsA("Humanoid").Health>0 then
-            local pos,vis = Camera:WorldToViewportPoint(p.Character[AimPart].Position)
-            if vis then
-                local dist = (Vector2.new(pos.X,pos.Y)-Vector2.new(Mouse.X,Mouse.Y)).Magnitude
-                if dist < cldist then
-                    cldist = dist
-                    closest = p
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and isEnemy(plr) and plr.Character and plr.Character:FindFirstChild("Head") then
+            local h = plr.Character:FindFirstChild("Head")
+            local humanoid = plr.Character:FindFirstChildWhichIsA("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local pos,vis = Camera:WorldToViewportPoint(h.Position)
+                if vis then
+                    local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                    if dist < cldist then
+                        cldist = dist
+                        closest = plr
+                    end
                 end
             end
         end
@@ -313,10 +345,10 @@ local function getClosestPlayerToCursor()
 end
 
 RunService.RenderStepped:Connect(function()
-    if AimbotActive and MenuOpen == false then
-        local target = getClosestPlayerToCursor()
-        if target and target.Character and target.Character:FindFirstChild(AimPart) then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character[AimPart].Position)
+    if AimbotActive and not MenuOpen then
+        local target = getClosestEnemyToCursor()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
         end
     end
 end)
@@ -328,11 +360,11 @@ if success then
     rawmet.__namecall = newcclosure(function(self, ...)
         local method = getnamecallmethod()
         if SilentAimActive and tostring(method)=="FindPartOnRayWithIgnoreList" then
-            local target = getClosestPlayerToCursor()
-            if target and target.Character and target.Character:FindFirstChild(AimPart) then
+            local target = getClosestEnemyToCursor()
+            if target and target.Character and target.Character:FindFirstChild("Head") then
                 local args = {...}
                 args[1].Origin = Camera.CFrame.Position
-                args[1].Direction = (target.Character[AimPart].Position - Camera.CFrame.Position).Unit * 900
+                args[1].Direction = (target.Character.Head.Position - Camera.CFrame.Position).Unit * 999
                 return __namecall(self, unpack(args))
             end
         end
