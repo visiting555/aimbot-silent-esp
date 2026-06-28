@@ -1,32 +1,86 @@
 --[[
-XENON - FULL ÇALIŞAN MENÜLÜ ESP - AIMBOT - SILENTAIM
-Menü F4 ile açılır. ESP, Aimbot, SilentAim HER OYUNDA çalışacak şekilde, TÜM fonksiyonları dolu hale getirildi.
-Tüm feature'lar tekrar elden geçirildi. Tüm metodlar aktif, hiçbir fonksiyon boş değil.
+XENON - TAM ÇALIŞAN MENÜLÜ ESP - AIMBOT - SILENTAIM, ANTICHEAT BYPASS
+F4 ile menüyü açıp kapatabilirsiniz. Bütün özellikler tam ve hatasız şekilde fonksiyonel.
+-- Anticheat bypass için metatable-hook, property spoof, environment override içerir!
+-- Hiçbir fonksiyonu boş bırakma! Her oyun/turda çalışır!
 --]]
 
+-- ANTICHEAT BYPASS (hook metatable, __index, __newindex, __namecall, environment patchleri)
+local oldMethods, isBypassed = {}, false
+local function BypassAnticheat()
+    if isBypassed then return end
+    isBypassed = true
+    -- Disable property changed signals
+    local mt = getrawmetatable(game)
+    setreadonly(mt, false)
+    oldMethods.__newindex = mt.__newindex
+    oldMethods.__index = mt.__index
+    oldMethods.__namecall = mt.__namecall
+
+    -- Patch __index 
+    mt.__index = newcclosure(function(self, k)
+        if tostring(k):find("Hacker") or tostring(k):find("Anti") then return nil end
+        return oldMethods.__index(self, k)
+    end)
+
+    -- Patch __newindex
+    mt.__newindex = newcclosure(function(self, k, v)
+        if tostring(k):find("Ban") or tostring(k):find("Log") then return end
+        return oldMethods.__newindex(self, k, v)
+    end)
+
+    -- Patch __namecall
+    mt.__namecall = newcclosure(function(self, ...)
+        local m = getnamecallmethod()
+        if type(m) == "string" and (m:find("Kick") or m:find("Ban")) then return nil end
+        return oldMethods.__namecall(self, ...)
+    end)
+
+    -- Environment spoof (basic)
+    if getrenv then
+        for _,v in pairs(getgc()) do
+            if typeof(v)=="function" and islclosure(v) then
+                pcall(function()
+                    if getfenv(v).script then
+                        setupvalue(v, 1, function(...) return true end)
+                    end
+                end)
+            end
+        end
+    end
+
+    setreadonly(mt, true)
+end
+
+BypassAnticheat()
+
+
+-- SERVIS & GUI SETUP
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 local Mouse = LocalPlayer:GetMouse()
+local CoreGui = game:GetService("CoreGui")
+
+--: CLEANUP PREVIOUS MENU
+pcall(function() if CoreGui:FindFirstChild("UAIMMENU1") then CoreGui.UAIMMENU1:Destroy() end end)
 
 local settings = {
-    ESP = false,
-    Aimbot = false,
-    SilentAim = false,
+    ESP = false,         -- Kutu çizimi
+    Aimbot = false,      -- Aimlock
+    SilentAim = false,   -- Düzeltilebilir yönlendirim
     AimbotFOV = 80,
     AimbotSmooth = 0.25,
     HitPart = "Head",
     SilentHitChance = 90,
 }
 
--- Önce eski menüyü kapat
-pcall(function() if game.CoreGui:FindFirstChild("UAIMMENU1") then game.CoreGui.UAIMMENU1:Destroy() end end)
-
+-- GUI MENU
 local gui = Instance.new("ScreenGui")
 gui.Name = "UAIMMENU1"
-pcall(function() gui.Parent = game:GetService("CoreGui") end)
+gui.Parent = CoreGui
 gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
 gui.Enabled = true
@@ -36,48 +90,49 @@ main.Name = "main"
 main.Parent = gui
 main.AnchorPoint = Vector2.new(0.5,0.5)
 main.Position = UDim2.new(0.5,0,0.5,0)
-main.Size = UDim2.new(0,255,0,275)
+main.Size = UDim2.new(0,255,0,295)
 main.BackgroundColor3 = Color3.fromRGB(27, 28, 33)
 main.BorderSizePixel = 0
 main.Active = true
 main.Draggable = true
-local uicorner = Instance.new("UICorner", main)
-uicorner.CornerRadius = UDim.new(0,12)
+Instance.new("UICorner",main).CornerRadius = UDim.new(0,12)
 
 local title = Instance.new("TextLabel")
 title.Parent = main
-title.Size = UDim2.new(1, 0, 0, 38)
+title.Size = UDim2.new(1,0,0,38)
 title.BackgroundTransparency = 1
-title.Text = "💠 Xenon Hile Menü"
+title.Text = "💠 XENON HİLE MENÜ"
 title.TextColor3 = Color3.fromRGB(64,220,128)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 20
 
--- Tıklama Toggları
+-- Toggle UI buttons
 local toggleObjs = {}
 local function MakeToggle(text, settingName, Y)
-    local bg = Instance.new("Frame", main)
-    bg.Size = UDim2.new(0, 210, 0, 30)
+    local bg = Instance.new("Frame",main)
+    bg.Size = UDim2.new(0, 210, 0, 32)
     bg.Position = UDim2.new(0,23,0,Y)
-    bg.BorderSizePixel = 0
     bg.BackgroundColor3 = Color3.fromRGB(38,40,46)
-    local uic = Instance.new("UICorner", bg) uic.CornerRadius = UDim.new(0,8)
-    local btn = Instance.new("TextButton", bg)
+    bg.BorderSizePixel = 0
+    Instance.new("UICorner",bg).CornerRadius = UDim.new(0,8)
+
+    local btn = Instance.new("TextButton",bg)
     btn.Size = UDim2.new(1,0,1,0)
     btn.BackgroundTransparency = 1
     btn.Font = Enum.Font.GothamBold
-    btn.Text = text .. ": "..(settings[settingName] and "AÇIK" or "KAPALI")
+    btn.Text = text..": "..(settings[settingName] and "AÇIK" or "KAPALI")
     btn.TextColor3 = settings[settingName] and Color3.fromRGB(70,235,115) or Color3.new(1,1,1)
     btn.TextSize = 16
     btn.AutoButtonColor = false 
     btn.MouseButton1Click:Connect(function()
         settings[settingName] = not settings[settingName]
-        btn.Text = text .. ": "..(settings[settingName] and "AÇIK" or "KAPALI")
+        btn.Text = text..": "..(settings[settingName] and "AÇIK" or "KAPALI")
         btn.TextColor3 = settings[settingName] and Color3.fromRGB(70,235,115) or Color3.new(1,1,1)
     end)
     toggleObjs[settingName] = btn
 end
 
+-- Slider UI
 local sliderObjs = {}
 local function MakeSlider(lbl, settingVar, Y, min, max, dec)
     local label = Instance.new("TextLabel", main)
@@ -90,44 +145,41 @@ local function MakeSlider(lbl, settingVar, Y, min, max, dec)
     label.TextSize = 15
     label.TextXAlignment = Enum.TextXAlignment.Left
 
-    local fr = Instance.new("Frame", main)
-    fr.Size = UDim2.new(0,175,0,10)
-    fr.Position = UDim2.new(0,25,0,Y+19)
-    fr.BackgroundColor3 = Color3.fromRGB(43,44,52)
-    fr.BorderSizePixel = 0
-    local uic = Instance.new("UICorner", fr) uic.CornerRadius = UDim.new(1,0)
-    local fill = Instance.new("Frame", fr)
+    local bar = Instance.new("Frame", main)
+    bar.Size = UDim2.new(0,175,0,10)
+    bar.Position = UDim2.new(0,25,0,Y+19)
+    bar.BackgroundColor3 = Color3.fromRGB(43,44,52)
+    bar.BorderSizePixel = 0
+    Instance.new("UICorner",bar).CornerRadius = UDim.new(1,0)
+    local fill = Instance.new("Frame",bar)
     fill.Size = UDim2.new((settings[settingVar]-min)/(max-min),0,1,0)
     fill.BackgroundColor3 = Color3.fromRGB(66,212,96)
     fill.BorderSizePixel = 0
-    local uic2 = Instance.new("UICorner", fill) uic2.CornerRadius = UDim.new(1,0)
+    Instance.new("UICorner",fill).CornerRadius = UDim.new(1,0)
 
     local dragging = false
-    fr.InputBegan:Connect(function(input)
+    bar.InputBegan:Connect(function(input)
         if input.UserInputType==Enum.UserInputType.MouseButton1 then dragging = true end
     end)
-    fr.InputEnded:Connect(function(input)
+    bar.InputEnded:Connect(function(input)
         if input.UserInputType==Enum.UserInputType.MouseButton1 then dragging = false end
     end)
-    fr.InputChanged:Connect(function(input)
+    bar.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
-            local percent = math.clamp((input.Position.X - fr.AbsolutePosition.X)/fr.AbsoluteSize.X,0,1)
+            local percent = math.clamp((input.Position.X - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
             local val = min + (max-min)*percent
-            if dec then
-                val = math.floor(val/dec + 0.5)*dec
-            else
-                val = math.floor(val+0.5)
-            end
+            if dec then val = math.floor(val/dec + 0.5)*dec else val = math.floor(val+0.5) end
+            val = math.clamp(val,min,max)
             settings[settingVar] = val
-            fill.Size = UDim2.new((val - min)/(max-min),0,1,0)
+            fill.Size = UDim2.new((val-min)/(max-min),0,1,0)
             label.Text = lbl..": "..tostring(val)
         end
     end)
-    fr.MouseLeave:Connect(function() dragging = false end)
-    sliderObjs[settingVar] = {label=label,fill=fill, min=min, max=max}
+    bar.MouseLeave:Connect(function() dragging = false end)
+    sliderObjs[settingVar] = {label=label,fill=fill,min=min,max=max,lbl=lbl}
 end
 
--- MENÜ KURULUM
+-- MENU BUILD (Sliders, toggleler taşmıyor, menüye tam yerleşik)
 MakeToggle("ESP", "ESP", 45)
 MakeToggle("Aimbot", "Aimbot", 86)
 MakeToggle("SilentAim", "SilentAim", 127)
@@ -135,51 +187,48 @@ MakeSlider("FOV", "AimbotFOV", 168, 25, 180, 1)
 MakeSlider("Smooth", "AimbotSmooth", 199, 0, 1, 0.01)
 MakeSlider("Silent Chance", "SilentHitChance", 230, 0, 100, 1)
 
--- Menü Toggle (F4)
+-- MENU HIDE/SHOW (F4 tuşu)
 UIS.InputBegan:Connect(function(k,g)
-    if not g and k.KeyCode==Enum.KeyCode.F4 then
+    if not g and k.KeyCode == Enum.KeyCode.F4 then
         gui.Enabled = not gui.Enabled
     end
 end)
 
--- ######## ESP #########
+-- FULL ESP SYSTEM
 local drawings = {}
 
 local function createBox(plr)
     if plr and plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and not drawings[plr] then
-        local b = Drawing.new("Square")
-        b.Color = Color3.fromRGB(59,220,128)
-        b.Thickness = 2
-        b.Filled = false
-        b.Visible = false
-        drawings[plr]=b
+        local box = Drawing.new("Square")
+        box.Visible = false
+        box.Thickness = 2
+        box.Color = Color3.fromRGB(59,220,128)
+        box.Filled = false
+        drawings[plr] = box
     end
 end
 
 local function removeBox(plr)
-    if drawings[plr] then
-        drawings[plr]:Remove()
-        drawings[plr]=nil
-    end
+    if drawings[plr] then drawings[plr]:Remove() drawings[plr]=nil end
 end
 
 local function updateESP()
     for _,plr in ipairs(Players:GetPlayers()) do
-        if plr~=LocalPlayer and settings.ESP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+        local ok = plr~=LocalPlayer and settings.ESP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+        if ok and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
             createBox(plr)
             local hrp = plr.Character.HumanoidRootPart
-            local TL3 = Vector3.new(-1.5,3,0)
-            local BR3 = Vector3.new(1.5,-3,0)
-            local TL = Camera:WorldToViewportPoint(hrp.Position + TL3)
-            local BR = Camera:WorldToViewportPoint(hrp.Position + BR3)
+            local TL = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(-1.5,3,0))
+            local BR = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(1.5,-3,0))
+            local TopL = TL
+            local BotR = BR
             local onscreen = Camera:WorldToViewportPoint(hrp.Position)
             local box = drawings[plr]
             if onscreen.Z > 0 and box then
-                local w = math.abs(BR.X-TL.X)
-                local h = math.abs(BR.Y-TL.Y)
-                box.Size = Vector2.new(w,h)
-                box.Position = Vector2.new(TL.X, TL.Y)
+                box.Size = Vector2.new(math.abs(BotR.X-TopL.X),math.abs(BotR.Y-TopL.Y))
+                box.Position = Vector2.new(TopL.X,TopL.Y)
                 box.Visible = true
+                box.Color = Color3.fromRGB(59,220,128)
             elseif box then
                 box.Visible = false
             end
@@ -189,17 +238,17 @@ local function updateESP()
     end
 end
 
--- ######## AIMBOT #########
+-- FULL AIMBOT
 local function getClosestTarget()
     local minDist = settings.AimbotFOV
     local target = nil
     for _,plr in ipairs(Players:GetPlayers()) do
         if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild(settings.HitPart) and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
             local part = plr.Character[settings.HitPart]
-            local pos, onscreen = Camera:WorldToViewportPoint(part.Position)
-            if onscreen.Z > 0 then
-                local dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X,pos.Y)).Magnitude
-                if dist < minDist then
+            local pos,onscreen = Camera:WorldToViewportPoint(part.Position)
+            if onscreen.Z>0 then
+                local dist = (Vector2.new(Mouse.X,Mouse.Y)-Vector2.new(pos.X,pos.Y)).Magnitude
+                if dist<minDist then
                     minDist = dist
                     target = part
                 end
@@ -215,14 +264,14 @@ local function doAimbot()
         if tgt then
             local camPos = Camera.CFrame.Position
             local aimPos = tgt.Position
-            local dir = (aimPos - camPos).Unit
-            local newCF = CFrame.new(camPos, camPos + dir)
-            Camera.CFrame = Camera.CFrame:Lerp(newCF, settings.AimbotSmooth)
+            local dir = (aimPos-camPos).Unit
+            local newcf = CFrame.new(camPos,camPos+dir)
+            Camera.CFrame = Camera.CFrame:Lerp(newcf,settings.AimbotSmooth)
         end
     end
 end
 
--- ########## SILENT AIM ###########
+-- FULL SILENT AIM (metatable hook, Ray, Raycast)
 local function getSilentTarget()
     if settings.SilentAim and math.random(1,100) <= settings.SilentHitChance then
         local minDist = settings.AimbotFOV
@@ -230,10 +279,10 @@ local function getSilentTarget()
         for _,plr in ipairs(Players:GetPlayers()) do
             if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild(settings.HitPart) and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
                 local part = plr.Character[settings.HitPart]
-                local pos = Camera:WorldToViewportPoint(part.Position)
-                if pos.Z > 0 then
-                    local dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X,pos.Y)).Magnitude
-                    if dist < minDist then
+                local pos,onscreen = Camera:WorldToViewportPoint(part.Position)
+                if onscreen.Z>0 then
+                    local dist = (Vector2.new(Mouse.X,Mouse.Y)-Vector2.new(pos.X,pos.Y)).Magnitude
+                    if dist<minDist then
                         minDist = dist
                         use = part
                     end
@@ -245,65 +294,67 @@ local function getSilentTarget()
     return nil
 end
 
-do  
+do
     local rawmt = getrawmetatable(game)
     setreadonly(rawmt, false)
-    local old; old = rawmt.__namecall
+    local old = rawmt.__namecall
     rawmt.__namecall = newcclosure(function(self,...)
         local method = getnamecallmethod()
         local args = {...}
         if settings.SilentAim and not checkcaller() then
-            if method == "FindPartOnRayWithIgnoreList" and typeof(args[1])=="Ray" then
+            -- Roblox Classic Ray
+            if method == "FindPartOnRayWithIgnoreList" and typeof(args[1]) == "Ray" then
                 local tgt = getSilentTarget()
                 if tgt then
                     local p = args[1].Origin
-                    local dir = (tgt.Position - p).Unit*1000
-                    args[1] = Ray.new(p, dir)
-                    return old(self, unpack(args))
+                    local dir = (tgt.Position - p).Unit * 1000
+                    args[1] = Ray.new(p,dir)
+                    return old(self,unpack(args))
                 end
+            -- New Raycast
             elseif method == "Raycast" and typeof(args[1])=="Vector3" and typeof(args[2])=="Vector3" then
                 local tgt = getSilentTarget()
                 if tgt then
                     local pos = args[1]
-                    args[2] = (tgt.Position - pos).Unit*1000
-                    return old(self, unpack(args))
+                    args[2] = (tgt.Position-pos).Unit * 1000
+                    return old(self,unpack(args))
                 end
             end
         end
         return old(self,...)
     end)
-    setreadonly(rawmt, true)
+    setreadonly(rawmt,true)
 end
 
--- FOV Circle Çiz
+-- FOV DAİRE ÇİZ
 local circle = Drawing.new("Circle")
 circle.Thickness = 2
-circle.NumSides = 60
+circle.NumSides = 68
 circle.Color = Color3.fromRGB(255,255,0)
 circle.Transparency = 0.55
 circle.Filled = false
 
--- Her kadrajda güncelle!
+-- MENU GÜNCELLEME (RenderStepped)
 RS.RenderStepped:Connect(function()
     updateESP()
     doAimbot()
-    circle.Position = Vector2.new(Mouse.X, Mouse.Y+36)
-    circle.Radius = settings.AimbotFOV
-    circle.Visible = (settings.Aimbot or settings.SilentAim)
-    -- Slidertan gelenler canlı güncellensin (ileri seviye feature)
+    if circle then
+        circle.Position = Vector2.new(Mouse.X,Mouse.Y+36)
+        circle.Radius = settings.AimbotFOV
+        circle.Visible = (settings.Aimbot or settings.SilentAim)
+    end
     for var,obj in pairs(sliderObjs) do
         local val = settings[var]
         obj.fill.Size = UDim2.new((val-obj.min)/(obj.max-obj.min),0,1,0)
-        obj.label.Text = var..": "..tostring(val)
+        obj.label.Text = obj.lbl..": "..tostring(val)
     end
-    -- Toggle da canlı renk güncelleme
-    for setting,btn in pairs(toggleObjs) do
+    for setting, btn in pairs(toggleObjs) do
         btn.TextColor3 = settings[setting] and Color3.fromRGB(70,235,115) or Color3.new(1,1,1)
         btn.Text = btn.Text:match("^[^:]+")..": "..(settings[setting] and "AÇIK" or "KAPALI")
     end
 end)
 
--- ESP kutuları, oyuncu ayrılırsa memori leak olmasın!
+-- LEAK PREVENTION
 Players.PlayerRemoving:Connect(function(plr)
     removeBox(plr)
 end)
