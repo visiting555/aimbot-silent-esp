@@ -1,3 +1,5 @@
+-- EĞİTİM AMAÇLI TAM DOLU AIMBOT+ESP+SILENTAIM ROBLOX HİLESİ MENÜLÜ
+
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
@@ -11,6 +13,7 @@ local cheats = {
 }
 local menuOpen = false
 
+-- Takım kontrolü için
 local function isEnemy(player)
     if player == LP then return false end
     if player.Team ~= nil and LP.Team ~= nil then
@@ -19,6 +22,7 @@ local function isEnemy(player)
     return true
 end
 
+-- En yakın düşmanı bul (Mouse'a en yakın)
 local function getClosestEnemy()
     local mousePos = UIS:GetMouseLocation()
     local minDist, closest = math.huge, nil
@@ -37,6 +41,7 @@ local function getClosestEnemy()
     return closest
 end
 
+-- Kamera ile hedefe bak
 local function aimAt(target)
     if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
     local tPos = target.Character.HumanoidRootPart.Position
@@ -44,6 +49,7 @@ local function aimAt(target)
     Camera.CFrame = CFrame.new(cPos, Vector3.new(tPos.X, tPos.Y, tPos.Z))
 end
 
+-- SilentAim için hook
 local SilentAimTarget = nil
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
@@ -60,6 +66,7 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     return oldNamecall(self, ...)
 end)
 
+-- ESP kutuları yönetimi
 local espBoxes = {}
 local function clearESP()
     for _, v in pairs(espBoxes) do
@@ -122,15 +129,18 @@ Players.PlayerRemoving:Connect(function()
     updateESP()
 end)
 
+-- Önceki menü sil
 if game:GetService("CoreGui"):FindFirstChild("geneMenu") then
     game:GetService("CoreGui"):FindFirstChild("geneMenu"):Destroy()
 end
 
+-- Menü GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "geneMenu"
 gui.Parent = game:GetService("CoreGui")
 gui.ResetOnSpawn = false
 
+-- Ana menü oluşturucu
 local function createGeneMenu()
     if gui:FindFirstChild("WholeMenu") then
         gui.WholeMenu:Destroy()
