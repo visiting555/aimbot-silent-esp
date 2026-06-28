@@ -325,43 +325,49 @@ local function getClosestEnemyToMouse()
     return closest
 end
 
--- Aimbot always DEAD accurate: never miss (move mouse right on enemy head)
-local function aimAt(target)
-    if not target then return end
-    local pos = Camera:WorldToViewportPoint(target.Position)
-    local dx, dy = pos.X - Mouse.X, pos.Y - Mouse.Y
-    -- Use mouse_event for best accuracy if possible, fallback to mousemoverel
-    if (mouse_event and type(mouse_event)=="function") then
-        mouse_event(1, dx, dy, 0, 0)
-    else
-        mousemoverel(dx, dy)
+-- Use proper input for mouse movement
+local function moveMouseTo(x, y)
+    -- for best compatibility
+    if type(mouse_event) == "function" then
+        mouse_event(1, x, y, 0, 0)
+    elseif type(mousemoverel) == "function" then
+        mousemoverel(x, y)
     end
 end
 
--- SilentAim manip
+-- Aimbot function: always dead accurate head aimbot on enemies, never teammates
+local function aimAt(target)
+    if not target then return end
+    local pos = Camera:WorldToViewportPoint(target.Position)
+    -- extra snapping for closest accuracy
+    local dx, dy = pos.X - Mouse.X, pos.Y - Mouse.Y
+    moveMouseTo(dx, dy)
+end
+
 local silentTarget = nil
 do
     local mt = getrawmetatable(game)
-    local old; old = hookmetamethod(game, "__namecall", function(self,...)
+    local old
+    old = hookmetamethod(game, "__namecall", function(self, ...)
         local namecall = getnamecallmethod and getnamecallmethod() or ""
         local args = {...}
-        if settings.SilentAim and tostring(namecall)=="FireServer" then
+        if settings.SilentAim and tostring(namecall) == "FireServer" then
             local s = tostring(self):lower()
+            -- hit, bullet, shoot etc.
             if (s:find("hit") or s:find("bullet") or s:find("shoot")) and silentTarget and silentTarget.Parent then
                 args[1] = silentTarget
                 return old(self, unpack(args))
             end
         end
-        return old(self,...)
+        return old(self, ...)
     end)
 end
 
 RunService.RenderStepped:Connect(function()
-    -- Aimbot, dead accurate, ONLY on enemy heads, always hits, only when RMB is pressed, never teammates
     if settings.Aimbot then
-        local tgt = getClosestEnemyToMouse()
-        if tgt and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-            aimAt(tgt)
+        local target = getClosestEnemyToMouse()
+        if target and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+            aimAt(target)
         end
     end
 
