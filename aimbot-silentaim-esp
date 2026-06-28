@@ -9,9 +9,7 @@ local cheats = {
     ["ESP"] = false,
     ["SilentAim"] = false
 }
-
 local menuOpen = false
-local menuFrame = nil
 
 local function isEnemy(player)
     if player == LP then return false end
@@ -127,87 +125,98 @@ end)
 if game:GetService("CoreGui"):FindFirstChild("geneMenu") then
     game:GetService("CoreGui"):FindFirstChild("geneMenu"):Destroy()
 end
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "geneMenu"
 gui.Parent = game:GetService("CoreGui")
 gui.ResetOnSpawn = false
 
-local menuWidth, menuHeight = 310, 240
-menuFrame = Instance.new("Frame")
-menuFrame.Name = "geneMenuFrame"
-menuFrame.Parent = gui
-menuFrame.AnchorPoint = Vector2.new(0.5,0.5)
-menuFrame.Position = UDim2.new(0.5,0,0.5,0)
-menuFrame.Size = UDim2.new(0, menuWidth, 0, menuHeight)
-menuFrame.BackgroundColor3 = Color3.fromRGB(255,255,255)
-menuFrame.BorderSizePixel = 0
-menuFrame.Visible = menuOpen
-menuFrame.Active = true
-menuFrame.Draggable = true
+local function createGeneMenu()
+    if gui:FindFirstChild("WholeMenu") then
+        gui.WholeMenu:Destroy()
+    end
+    local menu = Instance.new("Frame")
+    menu.Name = "WholeMenu"
+    menu.Size = UDim2.new(0,350,0,265)
+    menu.Position = UDim2.new(0.5,-175,0.5,-132)
+    menu.AnchorPoint = Vector2.new(0.5,0.5)
+    menu.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    menu.Active = true
+    menu.Visible = menuOpen
+    menu.Parent = gui
+    menu.BorderSizePixel = 2
+    menu.BorderColor3 = Color3.fromRGB(0,0,0)
 
-local headerBar = Instance.new("Frame", menuFrame)
-headerBar.Size = UDim2.new(1,0,0,38)
-headerBar.Position = UDim2.new(0,0,0,0)
-headerBar.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    local titleBar = Instance.new("Frame",menu)
+    titleBar.Size = UDim2.new(1,0,0,40)
+    titleBar.Position = UDim2.new(0,0,0,0)
+    titleBar.BackgroundColor3 = Color3.fromRGB(40,40,40)
 
-local menuTitle = Instance.new("TextLabel")
-menuTitle.Parent = headerBar
-menuTitle.Size = UDim2.new(1,0,1,0)
-menuTitle.Position = UDim2.new(0,0,0,0)
-menuTitle.Text = "GENE"
-menuTitle.TextColor3 = Color3.fromRGB(255,255,255)
-menuTitle.Font = Enum.Font.SourceSansBold
-menuTitle.TextSize = 29
-menuTitle.BackgroundTransparency = 1
+    local txt = Instance.new("TextLabel")
+    txt.Parent = titleBar
+    txt.Text = "GENE"
+    txt.TextColor3 = Color3.fromRGB(255,255,255)
+    txt.BackgroundTransparency = 1
+    txt.Font = Enum.Font.SourceSansBold
+    txt.TextSize = 30
+    txt.Size = UDim2.new(1,0,1,0)
+    txt.Position = UDim2.new(0,0,0,0)
 
-local function createOption(name, def, y, desc)
-    local btn = Instance.new("TextButton")
-    btn.Parent = menuFrame
-    btn.Position = UDim2.new(0,21,0, y)
-    btn.Size = UDim2.new(0, menuWidth-42, 0, 46)
-    btn.BackgroundColor3 = cheats[name] and Color3.fromRGB(40,40,40) or Color3.fromRGB(10,10,10)
-    btn.BorderSizePixel = 0
-    btn.Text = ""
-    local lbl = Instance.new("TextLabel", btn)
-    lbl.Size = UDim2.new(1,0,1,0)
-    lbl.Position = UDim2.new(0,0,0,0)
-    lbl.BackgroundTransparency = 1
-    lbl.TextColor3 = Color3.fromRGB(255,255,255)
-    lbl.Font = Enum.Font.SourceSansBold
-    lbl.TextSize = 22
-    lbl.Text = name
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.TextStrokeTransparency = 0.7
+    local opts = {
+      {Name="Aimbot", Desc="Otomatik dusmana kilitlenme" , Key="Aimbot"},
+      {Name="ESP", Desc="Dusman oyuncu vucut ve bacak kutu (kirmizi)", Key="ESP"},
+      {Name="SilentAim", Desc="Atislar otomatik dusmani vurur", Key="SilentAim"}
+    }
 
-    local descL = Instance.new("TextLabel", btn)
-    descL.Size = UDim2.new(1,0,0,19)
-    descL.Position = UDim2.new(0,0,1,-19)
-    descL.BackgroundTransparency = 1
-    descL.TextColor3 = Color3.fromRGB(200,200,200)
-    descL.Font = Enum.Font.SourceSans
-    descL.TextSize = 14
-    descL.Text = desc
-    descL.TextXAlignment = Enum.TextXAlignment.Left
+    for i, v in ipairs(opts) do
+        local opt = Instance.new("TextButton")
+        opt.Parent = menu
+        opt.Size = UDim2.new(0,310,0,44)
+        opt.Position = UDim2.new(0,20,0, 48+(i-1)*56)
+        opt.BackgroundColor3 = cheats[v.Key] and Color3.fromRGB(40,40,40) or Color3.fromRGB(10,10,10)
+        opt.Text = ""
+        opt.BorderSizePixel = 0
 
-    btn.MouseButton1Click:Connect(function()
-        cheats[name] = not cheats[name]
-        btn.BackgroundColor3 = cheats[name] and Color3.fromRGB(40,40,40) or Color3.fromRGB(10,10,10)
-        if name == "ESP" then updateESP() end
-    end)
+        local lbl = Instance.new("TextLabel", opt)
+        lbl.Size = UDim2.new(0.5,0,1,0)
+        lbl.Position = UDim2.new(0,12,0,0)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = v.Name
+        lbl.TextColor3 = Color3.fromRGB(255,255,255)
+        lbl.Font = Enum.Font.SourceSansBold
+        lbl.TextSize = 22
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+        local desc = Instance.new("TextLabel", opt)
+        desc.Size = UDim2.new(0.5,0,1,0)
+        desc.Position = UDim2.new(0.5, 0, 0, 0)
+        desc.BackgroundTransparency = 1
+        desc.TextColor3 = Color3.fromRGB(220,220,220)
+        desc.Font = Enum.Font.SourceSansSemiBold
+        desc.TextSize = 16
+        desc.Text = v.Desc
+        desc.TextXAlignment = Enum.TextXAlignment.Right
+
+        opt.MouseButton1Click:Connect(function()
+            cheats[v.Key] = not cheats[v.Key]
+            opt.BackgroundColor3 = cheats[v.Key] and Color3.fromRGB(40,40,40) or Color3.fromRGB(10,10,10)
+            if v.Key == "ESP" then updateESP() end
+        end)
+    end
+
+    local infoLbl = Instance.new("TextLabel", menu)
+    infoLbl.Size = UDim2.new(1,0,0,25)
+    infoLbl.Position = UDim2.new(0,0,1,-29)
+    infoLbl.BackgroundTransparency = 1
+    infoLbl.TextColor3 = Color3.fromRGB(40,40,40)
+    infoLbl.Font = Enum.Font.SourceSansItalic
+    infoLbl.TextSize = 15
+    infoLbl.Text = "Menü için: Insert tuşu"
+
+    return menu
 end
 
-createOption("Aimbot", false, 50, "Sadece dusmanlara otomatik kilitliyor")
-createOption("ESP", false, 107, "Kırmızı vücut-bacak kutuları (her zaman doğru boyut)")
-createOption("SilentAim", false, 164, "Dusmanlara sessiz nişan" )
-
-local infoLbl = Instance.new("TextLabel", menuFrame)
-infoLbl.Size = UDim2.new(1,0,0,23)
-infoLbl.Position = UDim2.new(0,0,1,-23)
-infoLbl.BackgroundTransparency = 1
-infoLbl.TextColor3 = Color3.fromRGB(40,40,40)
-infoLbl.Font = Enum.Font.SourceSansItalic
-infoLbl.TextSize = 15
-infoLbl.Text = "Menü: Insert ile aç/kapat"
+local menuFrame = createGeneMenu()
 
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
@@ -215,6 +224,9 @@ UIS.InputBegan:Connect(function(input, gpe)
         menuOpen = not menuOpen
         if menuFrame and menuFrame.Parent then
             menuFrame.Visible = menuOpen
+        end
+        if gui:FindFirstChild("WholeMenu") == nil then
+            menuFrame = createGeneMenu()
         end
     end
 end)
