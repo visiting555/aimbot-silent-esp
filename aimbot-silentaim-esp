@@ -19,11 +19,11 @@ end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CrossUniversalMenu"
-ScreenGui.Parent = game.CoreGui
+ScreenGui.Parent = game:GetService("CoreGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 370, 0, 370)
-MainFrame.Position = UDim2.new(0.5, -185, 0.5, -185)
+MainFrame.Size = UDim2.new(0, 340, 0, 215)
+MainFrame.Position = UDim2.new(0.5, -170, 0.5, -110)
 MainFrame.BackgroundColor3 = Color3.new(1,1,1)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
@@ -38,58 +38,41 @@ Title.BackgroundTransparency = 1
 Title.Position = UDim2.new(0, 0, 0, 0)
 Title.Size = UDim2.new(1, 0, 0, 36)
 Title.Font = Enum.Font.GothamBlack
-Title.TextColor3 = Color3.new(0,0,0)
+Title.TextColor3 = Color3.new(1,1,1)
 Title.TextSize = 23
-Title.Text = "CrossUniversal Hile Menüsü"
-Title.TextStrokeTransparency = 0.8
+Title.Text = "Aimbot - ESP - SilentAim Menu"
+Title.TextStrokeTransparency = 0.4
+Title.BackgroundColor3 = Color3.new(0,0,0)
 
 local function SectionLabel(text, order)
     local l = Instance.new("TextLabel")
     l.Parent = MainFrame
     l.BackgroundTransparency = 1
-    l.Position = UDim2.new(0, 16, 0, 40 + order*29)
-    l.Size = UDim2.new(0, 260, 0, 23)
+    l.Position = UDim2.new(0, 16, 0, 38 + order*37)
+    l.Size = UDim2.new(1, -32, 0, 26)
     l.Font = Enum.Font.GothamBold
-    l.TextColor3 = Color3.new(0,0,0)
-    l.TextSize = 17
+    l.TextColor3 = Color3.new(1,1,1)
+    l.TextSize = 19
     l.TextXAlignment = Enum.TextXAlignment.Left
     l.Text = text
     return l
 end
 
-local ButtonY = 1
-local function MenuButton(name, callback)
-    local btn = Instance.new("TextButton")
-    btn.Parent = MainFrame
-    btn.Size = UDim2.new(0, 250, 0, 28)
-    btn.Position = UDim2.new(0, 22, 0, 40+(ButtonY*29))
-    btn.BackgroundColor3 = Color3.new(0,0,0)
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 17
-    btn.BorderSizePixel = 0
-    btn.Text = name
-    btn.AutoButtonColor = true
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    ButtonY = ButtonY + 1
-    btn.MouseButton1Click:Connect(callback)
-    return btn
-end
-
+local ButtonY = 0
 local function MenuToggle(name, getfn, setfn)
+    ButtonY = ButtonY + 1
     local btn = Instance.new("TextButton")
     btn.Parent = MainFrame
-    btn.Size = UDim2.new(0, 250, 0, 28)
-    btn.Position = UDim2.new(0, 22, 0, 40+(ButtonY*29))
+    btn.Size = UDim2.new(0, 260, 0, 30)
+    btn.Position = UDim2.new(0, 22, 0, 38 + ButtonY*37)
     btn.BackgroundColor3 = Color3.new(0,0,0)
     btn.TextColor3 = Color3.new(1,1,1)
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 17
+    btn.TextSize = 18
     btn.BorderSizePixel = 0
     btn.Text = name .. " [" .. (getfn() and "AÇIK" or "KAPALI") .. "]"
     btn.AutoButtonColor = true
     btn.TextXAlignment = Enum.TextXAlignment.Left
-    ButtonY = ButtonY + 1
     btn.MouseButton1Click:Connect(function()
         setfn(not getfn())
         btn.Text = name .. " [" .. (getfn() and "AÇIK" or "KAPALI") .. "]"
@@ -98,25 +81,26 @@ local function MenuToggle(name, getfn, setfn)
 end
 
 local function MenuSlider(name, getfn, setfn, min, max)
+    ButtonY = ButtonY + 1
     local lb = Instance.new("TextLabel")
     lb.Parent = MainFrame
     lb.BackgroundTransparency = 1
-    lb.Size = UDim2.new(0,110,0,28)
-    lb.Position = UDim2.new(0, 22, 0, 40+(ButtonY*29))
+    lb.Size = UDim2.new(0,110,0,30)
+    lb.Position = UDim2.new(0, 22, 0, 38 + ButtonY*37)
     lb.Text = name..": "..tostring(getfn())
-    lb.TextColor3 = Color3.new(0,0,0)
+    lb.TextColor3 = Color3.new(1,1,1)
     lb.Font = Enum.Font.GothamBold
-    lb.TextSize = 17
+    lb.TextSize = 18
     lb.TextXAlignment = Enum.TextXAlignment.Left
     lb.BorderSizePixel = 0
 
     local box = Instance.new("TextBox")
     box.Parent = MainFrame
-    box.Size = UDim2.new(0, 52, 0, 24)
-    box.Position = UDim2.new(0, 156, 0, 42+(ButtonY*29))
+    box.Size = UDim2.new(0, 46, 0, 24)
+    box.Position = UDim2.new(0, 156, 0, 41 + ButtonY*37)
     box.Text = tostring(getfn())
     box.Font = Enum.Font.GothamBold
-    box.TextSize = 16
+    box.TextSize = 15
     box.TextColor3 = Color3.new(1,1,1)
     box.BackgroundColor3 = Color3.new(0,0,0)
     box.BorderSizePixel = 0
@@ -132,202 +116,55 @@ local function MenuSlider(name, getfn, setfn, min, max)
             box.Text = tostring(getfn())
         end
     end)
-    ButtonY = ButtonY + 1
 end
 
-SectionLabel("Ana Hileler",0)
+local aimparts = {"Head", "UpperTorso", "LowerTorso"}
+local apidx = 1
+local function MenuButton(name, callback)
+    ButtonY = ButtonY + 1
+    local btn = Instance.new("TextButton")
+    btn.Parent = MainFrame
+    btn.Size = UDim2.new(0, 260, 0, 30)
+    btn.Position = UDim2.new(0, 22, 0, 38 + ButtonY*37)
+    btn.BackgroundColor3 = Color3.new(0,0,0)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 18
+    btn.BorderSizePixel = 0
+    btn.Text = name
+    btn.AutoButtonColor = true
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+SectionLabel("Ana Hileler", 0)
 MenuToggle("Aimbot", function() return AimbotActive end, function(v) AimbotActive = v end)
 MenuToggle("ESP", function() return ESPActive end, function(v) ESPActive = v end)
 MenuToggle("Silent Aim", function() return SilentAimActive end, function(v) SilentAimActive = v end)
 MenuSlider("FOV", function() return FOV end, function(v) FOV = v end, 20, 300)
 
-SectionLabel("Ekstra",5)
-local aimparts = {"Head", "UpperTorso", "LowerTorso"}
-local apidx = 1
 MenuButton("Aim Yeri: "..aimparts[apidx], function()
-    apidx = apidx%#aimparts+1
+    apidx = (apidx % #aimparts) + 1
     AimPart = aimparts[apidx]
-    MainFrame:FindFirstChildOfClass("TextButton").Text = "Aim Yeri: "..aimparts[apidx]
+    MenuButton("Aim Yeri: "..AimPart, function() end)
 end)
 
-SectionLabel("Oyuncu Hileleri",7)
-local playerList
-local selectedPlayer
-local function RefreshPlayers()
-    if playerList then playerList:ClearAllChildren() end
-    playerList = Instance.new("ScrollingFrame")
-    playerList.Name = "PlayerList"
-    playerList.Parent = MainFrame
-    playerList.Position = UDim2.new(0,282,0,43)
-    playerList.Size = UDim2.new(0,85,0,315)
-    playerList.CanvasSize = UDim2.new(0,0,0,23*(#Players:GetPlayers()+1))
-    playerList.BackgroundTransparency = 1
-    playerList.BorderSizePixel = 0
-    local y = 0
-    for _,p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            local plyBtn = Instance.new("TextButton")
-            plyBtn.Text = p.Name
-            plyBtn.Size = UDim2.new(0,75,0,22)
-            plyBtn.Position = UDim2.new(0,5,0,y)
-            plyBtn.BackgroundColor3 = Color3.new(0,0,0)
-            plyBtn.TextColor3 = Color3.new(1,1,1)
-            plyBtn.Parent = playerList
-            plyBtn.TextSize = 14
-            plyBtn.Font = Enum.Font.GothamBold
-            plyBtn.BorderSizePixel = 0
-            plyBtn.MouseButton1Click:Connect(function() selectedPlayer = p end)
-            y = y + 23
-        end
-    end
-end
-
-MenuButton("Oyuncu Listesini Yenile", RefreshPlayers)
-local function checkSel()
-    return selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("Humanoid")
-end
-MenuButton("Yak", function()
-    if checkSel() then
-        local hum = selectedPlayer.Character:FindFirstChild("Humanoid")
-        hum.Health = 0
-    end
-end)
-MenuButton("Patlat", function()
-    if checkSel() then
-        local root = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if root then
-            for i = 1,5 do
-                local exp = Instance.new("Explosion")
-                exp.Position = root.Position
-                exp.BlastRadius = 5
-                exp.Parent = workspace
-            end
-        end
-    end
-end)
-MenuButton("Git (Teleport Ol)", function()
-    if checkSel() then
-        local root = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if root and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = root.CFrame
-        end
-    end
-end)
-MenuButton("Yanına Çek", function()
-    if checkSel() then
-        local root = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if root and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            root.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-        end
-    end
-end)
-
-SectionLabel("Ekstra Özellikler",14)
-local FlyOn = false
-MenuToggle("Fly", function() return FlyOn end, function(v) 
-    FlyOn = v
-    if v then
-        local bp = Instance.new("BodyPosition")
-        bp.MaxForce = Vector3.new(9e9,9e9,9e9)
-        bp.Position = LocalPlayer.Character.HumanoidRootPart.Position
-        bp.Parent = LocalPlayer.Character.HumanoidRootPart
-        local flying = true
-        coroutine.wrap(function()
-            while flying and FlyOn do
-                local dir = Vector3.new()
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - Camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + Camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Camera.CFrame.UpVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Camera.CFrame.UpVector end
-                bp.Position = LocalPlayer.Character.HumanoidRootPart.Position + (dir.Unit * 6)
-                wait()
-            end
-            bp:Destroy()
-        end)()
-    end
-end)
-
-local NoclipOn = false
-MenuToggle("Noclip", function() return NoclipOn end, function(v)
-    NoclipOn = v
-end)
-RunService.Stepped:Connect(function()
-    if NoclipOn then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
-end)
-
-local InvisibleOn = false
-MenuToggle("Invisible", function() return InvisibleOn end, function(v)
-    InvisibleOn = v
-    if v and LocalPlayer.Character then
-        for _,v in pairs(LocalPlayer.Character:GetDescendants()) do
-            if v:IsA("BasePart") then v.Transparency = 1 end
-        end
-    elseif LocalPlayer.Character then
-        for _,v in pairs(LocalPlayer.Character:GetDescendants()) do
-            if v:IsA("BasePart") then v.Transparency = 0 end
-        end
-    end
-end)
-
-local GodOn = false
-MenuToggle("Godmode", function() return GodOn end, function(v)
-    GodOn = v
-    if v and LocalPlayer.Character then
-        if LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").Name = "1"
-            local newhum = LocalPlayer.Character:FindFirstChild("1"):Clone()
-            newhum.Name = "Humanoid"
-            newhum.Parent = LocalPlayer.Character
-            wait(0.1)
-            LocalPlayer.Character["1"]:Destroy()
-        end
-    end
-end)
-
-local SpinOn = false
-MenuToggle("Spinbot", function() return SpinOn end, function(v)
-    SpinOn = v
-    coroutine.wrap(function()
-        while SpinOn do
-            LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(11), 0)
-            wait()
-        end
-    end)()
-end)
-
-MenuButton("Araba Fırlat", function()
-    local car = Instance.new("Part")
-    car.Size = Vector3.new(6,2,12)
-    car.Position = LocalPlayer.Character.HumanoidRootPart.Position + (Camera.CFrame.LookVector * 8)
-    car.Anchored = false
-    car.BrickColor = BrickColor.Random()
-    car.Parent = workspace
-    car.Velocity = Camera.CFrame.LookVector * 200
-end)
-
-UserInputService.InputBegan:Connect(function(i, g)
-    if i.KeyCode==Enum.KeyCode.F and not g then
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.F and not gameProcessed then
         MenuOpen = not MenuOpen
         MainFrame.Visible = MenuOpen
-        if playerList then playerList.Visible = MenuOpen end
     end
 end)
 
 if (not _G.__CROSS__ESP) then _G.__CROSS__ESP = {} end
-function getScreen(pos)
+local function getScreen(pos)
     local p,vis = Camera:WorldToViewportPoint(pos)
     return Vector2.new(p.X,p.Y),vis
 end
+
 function ESP_Box(player)
-    if player==LocalPlayer then return end
+    if player == LocalPlayer then return end
     local char = player.Character
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
@@ -336,24 +173,27 @@ function ESP_Box(player)
     local box = Drawing.new("Square")
     box.Color = Color3.fromRGB(0,0,0)
     box.Thickness = 2
-    box.Size = Vector2.new(38,67)
-    box.Filled=false
-    box.Transparency=1
+    box.Size = Vector2.new(24,54)
+    box.Filled = false
+    box.Transparency = 1
     local circle = Drawing.new("Circle")
     circle.Color = Color3.fromRGB(255,255,255)
     circle.Thickness = 2
     circle.Filled = false
-    circle.Radius = 9
+    circle.Radius = 7
     circle.Transparency = 1
     local skel = {
-        body = Drawing.new("Line"),
+        torso = Drawing.new("Line"),
         leftLeg = Drawing.new("Line"),
         rightLeg = Drawing.new("Line"),
         leftArm = Drawing.new("Line"),
-        rightArm = Drawing.new("Line"),
-        spine = Drawing.new("Line")
+        rightArm = Drawing.new("Line")
     }
-    for _,line in pairs(skel) do line.Color = Color3.fromRGB(255,255,255) line.Thickness=2 line.Transparency=1 end
+    for _, line in pairs(skel) do
+        line.Color = Color3.fromRGB(255,255,255) 
+        line.Thickness = 2
+        line.Transparency = 1
+    end
     local con
     con = RunService.RenderStepped:Connect(function()
         if not ESPActive or not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
@@ -362,35 +202,39 @@ function ESP_Box(player)
             return
         end
         local c = player.Character
-        local hrp, hd = c:FindFirstChild("HumanoidRootPart"), c:FindFirstChild("Head")
-        local ll, rl = c:FindFirstChild("Left Leg") or c:FindFirstChild("LeftFoot"), c:FindFirstChild("Right Leg") or c:FindFirstChild("RightFoot")
-        local la, ra = c:FindFirstChild("Left Arm") or c:FindFirstChild("LeftHand"), c:FindFirstChild("Right Arm") or c:FindFirstChild("RightHand")
+        local hrp = c:FindFirstChild("HumanoidRootPart")
+        local hd = c:FindFirstChild("Head")
+        local ll = c:FindFirstChild("Left Leg") or c:FindFirstChild("LeftFoot")
+        local rl = c:FindFirstChild("Right Leg") or c:FindFirstChild("RightFoot")
+        local la = c:FindFirstChild("Left Arm") or c:FindFirstChild("LeftHand")
+        local ra = c:FindFirstChild("Right Arm") or c:FindFirstChild("RightHand")
         local tor = c:FindFirstChild("Torso") or c:FindFirstChild("UpperTorso")
         if hrp and hd then
-            local p1,ons1 = getScreen(hrp.Position + Vector3.new(0,1.5,0))
-            box.Size = Vector2.new(38,67)
-            box.Position = Vector2.new(p1.X-19,p1.Y-15)
+            local basePos, vis1 = getScreen(hrp.Position + Vector3.new(0,1,0))
+            box.Size = Vector2.new(24,54)
+            box.Position = Vector2.new(basePos.X-12, basePos.Y-20)
             box.Visible = true
 
-            local hsc,ons4 = getScreen(hd.Position)
-            circle.Position = Vector2.new(hsc.X,hsc.Y)
+            local headPos, vis2 = getScreen(hd.Position)
+            circle.Position = Vector2.new(headPos.X, headPos.Y)
             circle.Visible = true
-            local torsoSc, _ = tor and getScreen(tor.Position)
-            local llSc, _ = ll and getScreen(ll.Position)
-            local rlSc, _ = rl and getScreen(rl.Position)
-            local laSc, _ = la and getScreen(la.Position)
-            local raSc, _ = ra and getScreen(ra.Position)
 
-            skel.body.From = Vector2.new(hsc.X, hsc.Y+9)
-            skel.body.To = torsoSc or p1
-            skel.leftLeg.From = torsoSc or p1
-            skel.leftLeg.To = llSc or p1
-            skel.rightLeg.From = torsoSc or p1
-            skel.rightLeg.To = rlSc or p1
-            skel.leftArm.From = torsoSc or p1
-            skel.leftArm.To = laSc or p1
-            skel.rightArm.From = torsoSc or p1
-            skel.rightArm.To = raSc or p1
+            local torsoPos = tor and select(1,getScreen(tor.Position)) or basePos
+            local llPos = ll and select(1,getScreen(ll.Position)) or basePos
+            local rlPos = rl and select(1,getScreen(rl.Position)) or basePos
+            local laPos = la and select(1,getScreen(la.Position)) or basePos
+            local raPos = ra and select(1,getScreen(ra.Position)) or basePos
+
+            skel.torso.From = Vector2.new(headPos.X, headPos.Y + 7)
+            skel.torso.To = torsoPos
+            skel.leftLeg.From = torsoPos
+            skel.leftLeg.To = llPos
+            skel.rightLeg.From = torsoPos
+            skel.rightLeg.To = rlPos
+            skel.leftArm.From = torsoPos
+            skel.leftArm.To = laPos
+            skel.rightArm.From = torsoPos
+            skel.rightArm.To = raPos
             for _,l in pairs(skel) do l.Visible=true end
         else
             box.Visible = false circle.Visible = false
@@ -411,11 +255,10 @@ Players.PlayerAdded:Connect(function(p)
     if ESPActive then
         _G.__CROSS__ESP[p] = ESP_Box(p)
     end
-    RefreshPlayers()
 end)
 Players.PlayerRemoving:Connect(function(p)
     if _G.__CROSS__ESP[p] then _G.__CROSS__ESP[p].remove() end
-    RefreshPlayers()
+    _G.__CROSS__ESP[p] = nil
 end)
 RunService.RenderStepped:Connect(function()
     if ESPActive then
@@ -424,6 +267,13 @@ RunService.RenderStepped:Connect(function()
                 _G.__CROSS__ESP[plr]=ESP_Box(plr)
             end
         end
+    else
+        for _,esptable in pairs(_G.__CROSS__ESP) do
+            if esptable and esptable.remove then
+                esptable.remove()
+            end
+        end
+        _G.__CROSS__ESP = {}
     end
 end)
 
@@ -444,6 +294,7 @@ RunService.RenderStepped:Connect(function()
         FOVCircle.Radius = FOV
     end
 end)
+
 local function getClosestPlayerToCursor()
     local closest,cldist = nil,FOV
     for _,p in pairs(Players:GetPlayers()) do
@@ -460,8 +311,9 @@ local function getClosestPlayerToCursor()
     end
     return closest
 end
+
 RunService.RenderStepped:Connect(function()
-    if AimbotActive then
+    if AimbotActive and MenuOpen == false then
         local target = getClosestPlayerToCursor()
         if target and target.Character and target.Character:FindFirstChild(AimPart) then
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character[AimPart].Position)
@@ -469,20 +321,22 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local rawmet = getrawmetatable(game)
-local __namecall = rawmet.__namecall
-setreadonly(rawmet, false)
-rawmet.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    if SilentAimActive and tostring(method)=="FindPartOnRayWithIgnoreList" then
-        local target = getClosestPlayerToCursor()
-        if target and target.Character and target.Character:FindFirstChild(AimPart) then
-            local args = {...}
-            args[1].Origin = Camera.CFrame.Position
-            args[1].Direction = (target.Character[AimPart].Position - Camera.CFrame.Position).Unit * 900
-            return __namecall(self, unpack(args))
+local success, rawmet = pcall(getrawmetatable, game)
+if success then
+    local __namecall = rawmet.__namecall
+    setreadonly(rawmet, false)
+    rawmet.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        if SilentAimActive and tostring(method)=="FindPartOnRayWithIgnoreList" then
+            local target = getClosestPlayerToCursor()
+            if target and target.Character and target.Character:FindFirstChild(AimPart) then
+                local args = {...}
+                args[1].Origin = Camera.CFrame.Position
+                args[1].Direction = (target.Character[AimPart].Position - Camera.CFrame.Position).Unit * 900
+                return __namecall(self, unpack(args))
+            end
         end
-    end
-    return __namecall(self, ...)
-end)
-setreadonly(rawmet, true)
+        return __namecall(self, ...)
+    end)
+    setreadonly(rawmet, true)
+end
