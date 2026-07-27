@@ -9,254 +9,221 @@ local aimbotEnabled = false
 local espEnabled = false
 local godmodeEnabled = false
 
-local playerESP = {}
-
 -- ESKİ MENÜ TEMİZLİĞİ
 local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-if playerGui:FindFirstChild("BasitMenu") then
-    playerGui["BasitMenu"]:Destroy()
+if playerGui:FindFirstChild("GelistirilmisMenu") then
+    playerGui["GelistirilmisMenu"]:Destroy()
 end
 
--- SCREEN GUI
+-- GUI OLUŞTURMA
 local gui = Instance.new("ScreenGui")
-gui.Name = "BasitMenu"
+gui.Name = "GelistirilmisMenu"
 gui.ResetOnSpawn = false
 gui.Parent = playerGui
 
--- ANA FRAME
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 200, 0, 230)
+mainFrame.Size = UDim2.new(0, 210, 0, 240)
 mainFrame.Position = UDim2.new(0, 50, 0, 50)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 mainFrame.BorderSizePixel = 2
-mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+mainFrame.BorderColor3 = Color3.fromRGB(0, 170, 255)
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = gui
 
--- BAŞLIK
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 35)
-title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-title.Text = "EGLENCE PANELI"
+title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+title.Text = "GELİŞTİRİLMİŞ PANEL"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
-title.TextSize = 18
+title.TextSize = 16
 title.Parent = mainFrame
 
--- --- ESP MANTIĞI (DÜZELTİLDİ) ---
-local function removeESP(player)
-    if playerESP[player] then
-        if typeof(playerESP[player]) == "Instance" then
-            playerESP[player]:Destroy()
-        end
-        playerESP[player] = nil
-    end
-end
+-- --- DİNAMİK ESP SİSTEMİ ---
+local function updateESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local char = player.Character
+            local highlight = char:FindFirstChild("ESP_Highlight")
 
-local function createESP(player)
-    if player == LocalPlayer then return end
-    removeESP(player)
-
-    local char = player.Character or player.CharacterAdded:Wait()
-    if not char then return end
-
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "ESPHighlight"
-    highlight.Adornee = char
-    highlight.FillColor = Color3.fromRGB(255, 0, 0)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.FillTransparency = 0.5
-    highlight.Enabled = espEnabled
-    highlight.Parent = char
-
-    playerESP[player] = highlight
-end
-
--- ESP BUTONU
-local espBtn = Instance.new("TextButton")
-espBtn.Size = UDim2.new(0, 160, 0, 40)
-espBtn.Position = UDim2.new(0, 20, 0, 50)
-espBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-espBtn.Text = "ESP: KAPALI"
-espBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-espBtn.Font = Enum.Font.SourceSansBold
-espBtn.TextSize = 16
-espBtn.Parent = mainFrame
-
-espBtn.MouseButton1Click:Connect(function()
-    espEnabled = not espEnabled
-    espBtn.Text = espEnabled and "ESP: AÇIK" or "ESP: KAPALI"
-    espBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-
-    for player, _ in pairs(playerESP) do
-        if player and player.Character then
-            local hl = player.Character:FindFirstChild("ESPHighlight")
-            if hl then
-                hl.Enabled = espEnabled
+            if espEnabled then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    if not highlight then
+                        highlight = Instance.new("Highlight")
+                        highlight.Name = "ESP_Highlight"
+                        highlight.Adornee = char
+                        highlight.FillColor = Color3.fromRGB(255, 30, 30)
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        highlight.FillTransparency = 0.5
+                        highlight.Parent = char
+                    end
+                    highlight.Enabled = true
+                elseif highlight then
+                    highlight.Enabled = false
+                end
+            elseif highlight then
+                highlight.Enabled = false
             end
         end
     end
-end)
+end
 
--- --- AIMBOT MANTIĞI (BAKIŞ AÇISI VE EN YAKIN HEDEF) ---
+-- --- Gelişmiş Aimlock (Tehdit Algılama + Duvar Kontrolü) ---
+local function isVisible(targetPart)
+    local origin = Camera.CFrame.Position
+    local direction = (targetPart.Position - origin)
+    
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = RaycastFilterType.Exclude
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+    
+    local result = workspace:Raycast(origin, direction, raycastParams)
+    
+    if result and result.Instance:IsDescendantOf(targetPart.Parent) then
+        return true
+    end
+    return false
+end
+
 local function getBestTarget()
     local mousePos = UserInputService:GetMouseLocation()
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
 
     local myPos = myChar.HumanoidRootPart.Position
-
     local threatTarget = nil
-    local threatPriority = -1
-
+    local maxThreatAngle = 0.65 -- Sana doğru yaklaşık 50 derece açıyla bakanlar
+    
     local closestTarget = nil
     local closestDist = math.huge
 
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChildOfClass("Humanoid") then
-            local hum = player.Character:FindFirstChildOfClass("Humanoid")
-            if hum.Health > 0 then
-                local root = player.Character.HumanoidRootPart
-                local screenPos, onScreen = Camera:WorldToScreenPoint(root.Position)
+        if player ~= LocalPlayer and player.Character then
+            local char = player.Character
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
 
-                if onScreen then
-                    -- 1. Bize Doğru Bakıyor mu Kontrolü (Threat Detection)
-                    local lookVector = root.CFrame.LookVector
-                    local directionToMe = (myPos - root.Position).Unit
-                    local dotProduct = lookVector:Dot(directionToMe) -- 1'e ne kadar yakınsa o kadar bize bakıyordur
+            if hum and hum.Health > 0 and root then
+                -- Görüş Hattı Kontrolü (Duvar arkasındakilere boş kilitlenmesin)
+                if isVisible(root) then
+                    local screenPos, onScreen = Camera:WorldToScreenPoint(root.Position)
 
-                    if dotProduct > 0.7 then -- Bize oldukça düz bakıyor demektir (~45 derece açı)
-                        if dotProduct > threatPriority then
-                            threatPriority = dotProduct
+                    if onScreen then
+                        -- 1. Tehlike Mantığı: Yüzü sana dönük mü?
+                        local lookVec = root.CFrame.LookVector
+                        local dirToMe = (myPos - root.Position).Unit
+                        local dot = lookVec:Dot(dirToMe)
+
+                        if dot > maxThreatAngle then
+                            maxThreatAngle = dot
                             threatTarget = root
                         end
-                    end
 
-                    -- 2. Fareye En Yakınlık Hesabı
-                    local dist = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
-                    if dist < closestDist then
-                        closestDist = dist
-                        closestTarget = root
+                        -- 2. İmlece En Yakınlık
+                        local dist = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+                        if dist < closestDist then
+                            closestDist = dist
+                            closestTarget = root
+                        end
                     end
                 end
             end
         end
     end
 
-    -- Eğer bize bakan/tehdit oluşturan biri varsa İLK ONA kilitlenir
-    if threatTarget then
-        return threatTarget
-    end
-
-    -- Yoksa fareye en yakın olana kilitlenir
-    return closestTarget
+    -- Bize bakan tehdit varsa İLK ONA kilitlenir, yoksa imlece en yakın olana
+    return threatTarget or closestTarget
 end
 
--- AIMBOT BUTONU
+-- --- FE Bypassed Godmode (TouchInterest & Network) ---
+local function applyGodmode()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    -- Temas/Hasar Trigger'larını İstemci Tarafında Etkisizleştirme
+    for _, child in pairs(char:GetDescendants()) do
+        if child:IsA("TouchTransmitter") or child.Name == "TouchInterest" then
+            child:Destroy()
+        end
+    end
+
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.BreakJointsOnDeath = false
+    end
+end
+
+-- BUTONLAR
+local espBtn = Instance.new("TextButton")
+espBtn.Size = UDim2.new(0, 170, 0, 40)
+espBtn.Position = UDim2.new(0, 20, 0, 50)
+espBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+espBtn.Text = "ESP: KAPALI"
+espBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+espBtn.Font = Enum.Font.SourceSansBold
+espBtn.TextSize = 15
+espBtn.Parent = mainFrame
+
+espBtn.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    espBtn.Text = espEnabled and "ESP: AÇIK" or "ESP: KAPALI"
+    espBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+end)
+
 local aimBtn = Instance.new("TextButton")
-aimBtn.Size = UDim2.new(0, 160, 0, 40)
+aimBtn.Size = UDim2.new(0, 170, 0, 40)
 aimBtn.Position = UDim2.new(0, 20, 0, 100)
 aimBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-aimBtn.Text = "AIMBOT: KAPALI"
+aimBtn.Text = "AIMLOCK: KAPALI"
 aimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 aimBtn.Font = Enum.Font.SourceSansBold
-aimBtn.TextSize = 16
+aimBtn.TextSize = 15
 aimBtn.Parent = mainFrame
 
 aimBtn.MouseButton1Click:Connect(function()
     aimbotEnabled = not aimbotEnabled
-    aimBtn.Text = aimbotEnabled and "AIMBOT: AÇIK" or "AIMBOT: KAPALI"
+    aimBtn.Text = aimbotEnabled and "AIMLOCK: AÇIK" or "AIMLOCK: KAPALI"
     aimBtn.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
 end)
 
--- --- GODMODE MANTIĞI (ÖLÜMSÜZLÜK / HASAR ENGELLEYİCİ) ---
-local function applyGodmode(char)
-    if not char then return end
-    local hum = char:WaitForChild("Humanoid", 2)
-    if hum then
-        -- İstemci tarafında ölümü engelleyen bağlantılar
-        hum.BreakJointsOnDeath = false
-        
-        -- TouchInterest (Tuzak, Mermi vb. temas hasarlarını düşürür)
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Touched:Connect(function(hit)
-                    if godmodeEnabled and hum then
-                        hum.Health = hum.MaxHealth
-                    end
-                end)
-            end
-        end
-    end
-end
-
--- GODMODE BUTONU
 local godBtn = Instance.new("TextButton")
-godBtn.Size = UDim2.new(0, 160, 0, 40)
+godBtn.Size = UDim2.new(0, 170, 0, 40)
 godBtn.Position = UDim2.new(0, 20, 0, 150)
 godBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 godBtn.Text = "GODMODE: KAPALI"
 godBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 godBtn.Font = Enum.Font.SourceSansBold
-godBtn.TextSize = 16
+godBtn.TextSize = 15
 godBtn.Parent = mainFrame
 
 godBtn.MouseButton1Click:Connect(function()
     godmodeEnabled = not godmodeEnabled
     godBtn.Text = godmodeEnabled and "GODMODE: AÇIK" or "GODMODE: KAPALI"
     godBtn.BackgroundColor3 = godmodeEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-
-    if godmodeEnabled and LocalPlayer.Character then
-        applyGodmode(LocalPlayer.Character)
-    end
-end)
-
--- DÖNGÜLER VE TAKİP
-RunService.RenderStepped:Connect(function()
-    -- Aimbot Güncellemesi
-    if aimbotEnabled then
-        local targetRoot = getBestTarget()
-        if targetRoot then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetRoot.Position)
-        end
-    end
-
-    -- Godmode Can Sabitleme
-    if godmodeEnabled and LocalPlayer.Character then
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum and hum.Health < hum.MaxHealth then
-            hum.Health = hum.MaxHealth
-        end
-    end
-end)
-
--- OYUNCU TAKİBİ (Düzeltilmiş Respawn Desteği)
-local function setupPlayer(p)
-    if p == LocalPlayer then return end
     
-    if p.Character then createESP(p) end
-    p.CharacterAdded:Connect(function()
-        task.wait(0.5)
-        createESP(p)
-    end)
-end
-
-for _, p in pairs(Players:GetPlayers()) do
-    setupPlayer(p)
-end
-
-Players.PlayerAdded:Connect(function(p)
-    setupPlayer(p)
-end)
-
-Players.PlayerRemoving:Connect(function(p)
-    removeESP(p)
-end)
-
-LocalPlayer.CharacterAdded:Connect(function(char)
     if godmodeEnabled then
-        task.wait(0.5)
-        applyGodmode(char)
+        applyGodmode()
+    end
+end)
+
+-- ANA OYUN DÖNGÜSÜ (RenderStepped)
+RunService.RenderStepped:Connect(function()
+    -- 1. ESP Güncelleme
+    updateESP()
+
+    -- 2. Aimlock Takibi
+    if aimbotEnabled then
+        local target = getBestTarget()
+        if target then
+            -- Kamerayı Lerp (yumuşak geçiş) ile hedefe kilitler
+            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, target.Position), 0.4)
+        end
+    end
+
+    -- 3. Godmode Koruma
+    if godmodeEnabled then
+        applyGodmode()
     end
 end)
