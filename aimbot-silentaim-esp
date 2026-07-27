@@ -1,16 +1,33 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
 
-local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 local aimbotEnabled = false
 local espEnabled = true
 local godmodeEnabled = false
 
 local playerESP = {}
-local playerGodmode = {}
+
+-- GUİ'NİN EKRANA GELMESİNİ GARANTİLEYEN PARENT SEÇİMİ
+local function getGuiParent()
+    local success, result = pcall(function()
+        return CoreGui
+    end)
+    if success and result then
+        return CoreGui
+    end
+    return LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- Eski GUI varsa temizleyelim (Üst üste binmesin)
+local existingGui = getGuiParent():FindFirstChild("MenuGUI")
+if existingGui then
+    existingGui:Destroy()
+end
 
 -- ESP Temizleme
 local function removeESP(player)
@@ -75,7 +92,7 @@ local function updateESP()
     end
 end
 
--- En Yakın Hedefi Bulma
+-- En Yakın Hedefi Bulma (Aimbot İçin)
 local function getClosestTarget()
     local closest = nil
     local closestDist = math.huge
@@ -119,7 +136,6 @@ local function enableGodmode()
         humanoid.MaxHealth = math.huge
         humanoid.Health = math.huge
         humanoid.BreakJointsOnDeath = false
-        playerGodmode[LocalPlayer] = humanoid
     end
 end
 
@@ -132,14 +148,15 @@ local function disableGodmode()
         humanoid.Health = 100
         humanoid.BreakJointsOnDeath = true
     end
-    playerGodmode[LocalPlayer] = nil
 end
 
 -- GUI OLUŞTURMA
 local gui = Instance.new("ScreenGui")
 gui.Name = "MenuGUI"
 gui.ResetOnSpawn = false
-gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Ekran Yöneticisine Bağla
+gui.Parent = getGuiParent()
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 300, 0, 220)
@@ -161,7 +178,7 @@ title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.Parent = mainFrame
 
--- Buton: ESP
+-- ESP Butonu
 local toggleESPBtn = Instance.new("TextButton")
 toggleESPBtn.Size = UDim2.new(0, 120, 0, 40)
 toggleESPBtn.Position = UDim2.new(0.5, -130, 0.4, -20)
@@ -179,7 +196,7 @@ toggleESPBtn.MouseButton1Click:Connect(function()
     updateESP()
 end)
 
--- Buton: Aimbot
+-- Aimbot Butonu
 local toggleAimbotBtn = Instance.new("TextButton")
 toggleAimbotBtn.Size = UDim2.new(0, 120, 0, 40)
 toggleAimbotBtn.Position = UDim2.new(0.5, 10, 0.4, -20)
@@ -196,7 +213,7 @@ toggleAimbotBtn.MouseButton1Click:Connect(function()
     toggleAimbotBtn.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
 end)
 
--- Buton: Godmode
+-- Godmode Butonu
 local toggleGodmodeBtn = Instance.new("TextButton")
 toggleGodmodeBtn.Size = UDim2.new(0, 120, 0, 40)
 toggleGodmodeBtn.Position = UDim2.new(0.5, -60, 0.7, -10)
@@ -219,7 +236,7 @@ toggleGodmodeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- EVENT Halka Dinleyicileri (ESP Güncellemeleri için)
+-- ESP Oyuncu Bağlantıları
 for _, p in pairs(Players:GetPlayers()) do
     if p.Character then createESP(p) end
     p.CharacterAdded:Connect(function() createESP(p) end)
@@ -233,7 +250,7 @@ Players.PlayerRemoving:Connect(function(p)
     removeESP(p)
 end)
 
--- Oyun Döngüsü (Aimbot Sürekli Çalışması İçin)
+-- Aimbot Döngüsü
 RunService.RenderStepped:Connect(function()
     aimbot()
 end)
