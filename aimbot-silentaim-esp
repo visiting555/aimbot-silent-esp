@@ -5,64 +5,174 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- Executor yetkisine göre güvenli Parent bulma (GetHUI / CoreGui / PlayerGui)
-local function getSafeParent()
-    if gethui then
-        return gethui()
-    elseif syn and syn.protect_gui then
-        local gui = Instance.new("ScreenGui")
-        syn.protect_gui(gui)
-        gui.Parent = CoreGui
-        return gui
-    else
-        return LocalPlayer:WaitForChild("PlayerGui")
-    end
+local aimbotEnabled = false
+local espEnabled = false
+local godmodeEnabled = false
+
+local playerESP = {}
+
+-- ESKİ MENÜ VARSA TEMİZLE
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+if playerGui:FindFirstChild("BasitMenu") then
+    playerGui["BasitMenu"]:Destroy()
 end
 
--- Eski Menüyü Temizle
-local parentTarget = getSafeParent()
-if parentTarget:FindFirstChild("EgitimMenu") then
-    parentTarget["EgitimMenu"]:Destroy()
-end
-
--- ScreenGui
+-- SCREEN GUI CREATION
 local gui = Instance.new("ScreenGui")
-gui.Name = "EgitimMenu"
+gui.Name = "BasitMenu"
 gui.ResetOnSpawn = false
-gui.Parent = parentTarget
+gui.Parent = playerGui
 
--- Ana Çerçeve (Frame)
+-- MAIN FRAME (Ana Panel)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 220, 0, 180)
-mainFrame.Position = UDim2.new(0.1, 0, 0.2, 0) -- Ekranın sol üstüne yakın sabit konum
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.Size = UDim2.new(0, 200, 0, 230)
+mainFrame.Position = UDim2.new(0, 50, 0, 50) -- Sol Üst Köşe
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderSizePixel = 2
 mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = gui
 
--- Başlık
+-- BAŞLIK
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-title.Text = "TESTPANEL"
+title.Size = UDim2.new(1, 0, 0, 35)
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+title.Text = "EGLENCE PANELI"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
-title.TextSize = 16
+title.TextSize = 18
 title.Parent = mainFrame
 
--- Test Butonu
-local testBtn = Instance.new("TextButton")
-testBtn.Size = UDim2.new(0, 180, 0, 40)
-testBtn.Position = UDim2.new(0, 20, 0, 50)
-testBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-testBtn.Text = "MENÜ ÇALIŞIYOR"
-testBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-testBtn.Font = Enum.Font.SourceSansBold
-testBtn.TextSize = 14
-testBtn.Parent = mainFrame
+-- ESP OLUŞTURMA
+local function createESP(player)
+    if player == LocalPlayer or not player.Character then return end
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = player.Character
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.Enabled = espEnabled
+    highlight.Parent = player.Character
 
-testBtn.MouseButton1Click:Connect(function()
-    print("Menü butonuna basıldı!")
+    playerESP[player] = highlight
+end
+
+local function removeESP(player)
+    if playerESP[player] then
+        playerESP[player]:Destroy()
+        playerESP[player] = nil
+    end
+end
+
+-- ESP BUTONU
+local espBtn = Instance.new("TextButton")
+espBtn.Size = UDim2.new(0, 160, 0, 40)
+espBtn.Position = UDim2.new(0, 20, 0, 50)
+espBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+espBtn.Text = "ESP: KAPALI"
+espBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+espBtn.Font = Enum.Font.SourceSansBold
+espBtn.TextSize = 16
+espBtn.Parent = mainFrame
+
+espBtn.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    espBtn.Text = espEnabled and "ESP: AÇIK" or "ESP: KAPALI"
+    espBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+
+    for player, highlight in pairs(playerESP) do
+        if highlight then
+            highlight.Enabled = espEnabled
+        end
+    end
+end)
+
+-- AIMBOT BUTONU
+local aimBtn = Instance.new("TextButton")
+aimBtn.Size = UDim2.new(0, 160, 0, 40)
+aimBtn.Position = UDim2.new(0, 20, 0, 100)
+aimBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+aimBtn.Text = "AIMBOT: KAPALI"
+aimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+aimBtn.Font = Enum.Font.SourceSansBold
+aimBtn.TextSize = 16
+aimBtn.Parent = mainFrame
+
+aimBtn.MouseButton1Click:Connect(function()
+    aimbotEnabled = not aimbotEnabled
+    aimBtn.Text = aimbotEnabled and "AIMBOT: AÇIK" or "AIMBOT: KAPALI"
+    aimBtn.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+end)
+
+-- GODMODE BUTONU
+local godBtn = Instance.new("TextButton")
+godBtn.Size = UDim2.new(0, 160, 0, 40)
+godBtn.Position = UDim2.new(0, 20, 0, 150)
+godBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+godBtn.Text = "GODMODE: KAPALI"
+godBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+godBtn.Font = Enum.Font.SourceSansBold
+godBtn.TextSize = 16
+godBtn.Parent = mainFrame
+
+godBtn.MouseButton1Click:Connect(function()
+    godmodeEnabled = not godmodeEnabled
+    godBtn.Text = godmodeEnabled and "GODMODE: AÇIK" or "GODMODE: KAPALI"
+    godBtn.BackgroundColor3 = godmodeEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChildOfClass("Humanoid") then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if godmodeEnabled then
+            hum.MaxHealth = math.huge
+            hum.Health = math.huge
+        else
+            hum.MaxHealth = 100
+            hum.Health = 100
+        end
+    end
+end)
+
+-- AIMBOT DÖNGÜSÜ
+RunService.RenderStepped:Connect(function()
+    if aimbotEnabled then
+        local closest = nil
+        local closestDist = math.huge
+        local mousePos = UserInputService:GetMouseLocation()
+
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local root = player.Character.HumanoidRootPart
+                local screenPos, onScreen = Camera:WorldToScreenPoint(root.Position)
+
+                if onScreen then
+                    local dist = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+                    if dist < closestDist then
+                        closestDist = dist
+                        closest = root
+                    end
+                end
+            end
+        end
+
+        if closest then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Position)
+        end
+    end
+end)
+
+-- ESP OYUNCU TAKİBİ
+for _, p in pairs(Players:GetPlayers()) do
+    if p.Character then createESP(p) end
+    p.CharacterAdded:Connect(function() createESP(p) end)
+end
+
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function() createESP(p) end)
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    removeESP(p)
 end)
