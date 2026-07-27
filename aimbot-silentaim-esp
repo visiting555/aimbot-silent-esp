@@ -5,12 +5,12 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 local aimbotEnabled = false
-local espEnabled = true
+local esp = true
 
 local playerESP = {}
 
 local function removeESP(player)
-    if playerESP[player] then
+    if playerESP[] then
         if playerESP[player].highlight then
             playerESP[player].highlight:Destroy()
         end
@@ -39,11 +39,11 @@ local function createESP(player)
     billboard.Adornee = char
     billboard.Size = UDim2.new(0, 200, 0, 50)
     billboard.StudsOffset = Vector3.new(0, 3.5, 0)
-   AlwaysOnTop = true
+    billboard.AlwaysOnTop = true
     billboard.Enabled = espEnabled
     billboard.Parent = char
     
-    = Instance.new("TextLabel")
+    local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = player.Name
@@ -80,7 +80,7 @@ local function getClosestTarget()
             if onScreen then
                 local dist = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
                 if dist < closestDist then
-                    closestDist = dist
+                   Dist = dist
                     closest = player
                 end
             end
@@ -106,8 +106,8 @@ gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 250, 0, 160)
-mainFrame.Position = UDim2.new(0.5, -125, 0.5, -80)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.Position = UDim2.new(05, -125, 0.5, -80)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.2
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
@@ -126,7 +126,7 @@ title.Parent = mainFrame
 
 local toggleESP = Instance.new("TextButton")
 toggleESP.Size = UDim2.new(0, 100, 0, 40)
-toggleESP.Position = UDim2.new(0.5, -110, 0.5, -20)
+ESP.Position = UDim2.new(0.5,110, 0.5, -20)
 toggleESP.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
 toggleESP.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleESP.Text = "ESP: ON"
@@ -134,21 +134,21 @@ toggleESP.Font = Enum.Font.GothamBold
 toggleESP.TextScaled = true
 toggleESP.Parent = mainFrame
 
-local toggleAimbot =("TextButton")
+local toggleAimbot = Instance.new("TextButton")
 toggleAimbot.Size = UDim2.new(0, 100, 0, 40)
-toggleAimbot = UDim2.new(0.5, 10, 0.5, -20)
+toggleAimbot.Position = UDim2.new(0.5, 10, 0.5, -20)
 toggleAimbot.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 toggleAimbot.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleAimbot.Text = "AIM: OFF"
 toggleAimbot.Font = Enum.Font.GothamBold
-toggleAimbot.TextScaled = true
+toggleAimbot.TextScal = true
 toggleAimbot.Parent = mainFrame
 
-local infoLabel = Instance.new("TextLabel")
-infoLabel.Size = UDim2.new(1, 0, 0, 30)
-infoLabel.Position = UDim2.new(0, 0, 1, -30)
+ infoLabel = Instance.new("TextLabel")
+infoLabel.Size =Dim2.new(1, 0, 0, )
+infoLabel.Position = UDim2.new(0,0, 1, -30)
 infoLabel.BackgroundTransparency = 1
-infoLabel.Text = "AIM KEY: LEFT ALT"
+infoLabel.Text = "AIM KEY LEFT ALT"
 infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 infoLabel.TextScaled = true
 infoLabel.Font = Enum.Font.Gotham
@@ -159,23 +159,40 @@ toggleESP.MouseButton1Click:Connect(function()
     updateESP()
     if espEnabled then
         toggleESP.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-        toggleESP.Text = "ESP: ON"
+       ESP.Text = "ESP: ON"
     else
-        toggleESP.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+        toggle.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
         toggleESP.Text = "ESP: OFF"
     end
 end)
 
-toggleAimbot.MouseButton1Click:Connect(function()
-    aimbotEnabled = not aimbotEnabled
+toggleAimbot.MButton1Click:Connect(function()
+    aimbotEnabled = notbotEnabled
     if aimbotEnabled then
-        toggleAimbot.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+        toggleAot.BackgroundColor3 = Color3.fromRGB(0,200, 0)
         toggleAimbot.Text = "AIM: ON"
     else
-        toggleAimbot.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-        toggleAimbot.Text = "AIM: OFF"
+        toggleAimbot.BackColor3 = Color3.fromRGB(200, 0,0)
+        toggleAimbot.Text = "AIM:"
     end
 end)
 
 for _, player in pairs(Players:GetPlayers()) do
-   
+    createESP(player)
+end
+
+PlayerslayerAdded:Connect(function(player)
+    player.CharacterAdded:(function()
+        createESP(player)
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+end)
+
+RunService.RenderStepped:Connect()
+    if aimbotEnabled and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then
+        aimbot()
+    end
+end)
