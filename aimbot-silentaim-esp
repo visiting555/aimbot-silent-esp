@@ -5,19 +5,19 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 local aimbotEnabled = false
-local esp = true
+local espEnabled = true
+local godmodeEnabled = false
 
 local playerESP = {}
-
 local function removeESP(player)
-    if playerESP[] then
+    if playerESP[player] then
         if playerESP[player].highlight then
             playerESP[player].highlight:Destroy()
         end
         if playerESP[player].billboard then
             playerESP[player].billboard:Destroy()
         end
-        playerESP[player] = nil
+        player = nil
     end
 end
 
@@ -28,31 +28,29 @@ local function createESP(player)
     
     local highlight = Instance.new("Highlight")
     highlight.Adornee = char
-    highlight.FillColor = Color3.fromRGB(255, 50, 50)
+    highlight.F3.fromRGB(255, 50, 50)
     highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
     highlight.FillTransparency = 0.4
     highlight.OutlineTransparency = 0
-    highlight.Enabled = espEnabled
-    highlight.Parent = char
+    highlight.Enabled    highlight.Parent = char
     
     local billboard = Instance.new("BillboardGui")
     billboard.Adornee = char
     billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+    billboard.StudsOffset = Vector3.new(0,  0)
     billboard.AlwaysOnTop = true
     billboard.Enabled = espEnabled
     billboard.Parent = char
     
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = player.Name
+    label.BackgroundTransparency = label.Text = player.Name
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
     label.TextScaled = true
     label.Font = Enum.Font.GothamBold
     label.Parent = billboard
     
-    playerESP[player] = {highlight = highlight, billboard = billboard}
+    playerESP[player] = {board = billboard}
 end
 
 local function updateESP()
@@ -62,8 +60,7 @@ local function updateESP()
         end
         if esp.billboard then
             esp.billboard.Enabled = espEnabled
-        end
-    end
+ end
 end
 
 local function getClosestTarget()
@@ -72,15 +69,15 @@ local function getClosestTarget()
     local mousePos = UserInputService:GetMouseLocation()
     
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        if player ~= Local.Character:FindFirstChild("HumanoidRootPart") then
             local char = player.Character
             local root = char.HumanoidRootPart
             local screenPos, onScreen = Camera:WorldToScreenPoint(root.Position)
             
             if onScreen then
-                local dist = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+                local dist = (Vector2.new, mousePos.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
                 if dist < closestDist then
-                   Dist = dist
+                    closestDist = dist
                     closest = player
                 end
             end
@@ -99,22 +96,58 @@ local function aimbot()
     end
 end
 
+local function enableGodmode()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.MaxHealth = math.huge
+        humanoid.Health = math.huge
+        humanoid.BreakJointsOnDeath = false
+        humanoid.Parent = nil
+        wait()
+        humanoid.Parent = char
+        playerGodmode[LocalPlayer] = humanoid
+    end
+end
+
+local function disableGodmode()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass    if humanoid then
+        humanoid.MaxHealth = 100
+        humanoid.Health = 100
+        humanoid.BreakJointsOnDeath = true
+    end
+    if playerGodmode[LocalPlayer] then
+        playerGodmode[LocalPlayer] = nil
+    end
+end
+
+local function toggleGodmode()
+    godmodeEnabled = not godmodeEnabled
+    if godmodeEnabled then
+        enableGodmode()
+    else
+        disableGodmode()
+    end
+    return godmodeEnabled
+end
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "MenuGUI"
 gui.ResetOnSpawn = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 250, 0, 160)
-mainFrame.Position = UDim2.new(05, -125, 0.5, -80)
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.BackgroundTransparency = 0.2
+mainFrame.Size = UDim2.new(0, 300, 0, 220)
+mainFrame.Position = UDim2.new(0.5, -150, 0110)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Draggable = true
-mainFrame.Parent = gui
-
-local title = Instance.new("TextLabel")
+mainFrame.Parent = gu.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
 title.Position = UDim2.new(0, 0, 0, 0)
 title.BackgroundTransparency = 1
@@ -125,8 +158,8 @@ title.Font = Enum.Font.GothamBold
 title.Parent = mainFrame
 
 local toggleESP = Instance.new("TextButton")
-toggleESP.Size = UDim2.new(0, 100, 0, 40)
-ESP.Position = UDim2.new(0.5,110, 0.5, -20)
+toggleESP.Size = UDim2.new(0, 120, 0, 40)
+toggleESP.Position = UDim2.new(0.5, -130, 0.5, -30)
 toggleESP.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
 toggleESP.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleESP.Text = "ESP: ON"
@@ -135,64 +168,25 @@ toggleESP.TextScaled = true
 toggleESP.Parent = mainFrame
 
 local toggleAimbot = Instance.new("TextButton")
-toggleAimbot.Size = UDim2.new(0, 100, 0, 40)
-toggleAimbot.Position = UDim2.new(0.5, 10, 0.5, -20)
+toggleAimbot.Size = UDim2.new(0, 120, 0, 40)
+toggleAimbot.Position = UDim2.new(0.5, 10, 0.5, -30)
 toggleAimbot.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 toggleAimbot.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleAimbot.Text = "AIM: OFF"
 toggleAimbot.Font = Enum.Font.GothamBold
-toggleAimbot.TextScal = true
+toggleAimbot.TextScaled = true
 toggleAimbot.Parent = mainFrame
 
- infoLabel = Instance.new("TextLabel")
-infoLabel.Size =Dim2.new(1, 0, 0, )
-infoLabel.Position = UDim2.new(0,0, 1, -30)
-infoLabel.BackgroundTransparency = 1
-infoLabel.Text = "AIM KEY LEFT ALT"
-infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-infoLabel.TextScaled = true
-infoLabel.Font = Enum.Font.Gotham
-infoLabel.Parent = mainFrame
+local toggleGodmode = Instance.new("TextButton")
+toggleGodmode.Size = UDim2.new(0, 120, 0, 40)
+toggleGodmode.Position = UDim2.new(0.5, -60, 0.5, 20)
+toggleGodmode.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+toggleGodmode.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleGodmode.Text = "GOD: OFF"
+toggleGodmode.Font = Enum.Font.GothamBold
+toggleGodmode.TextScaled = true
+toggleGodmode.Parent = mainFrame
 
-toggleESP.MouseButton1Click:Connect(function()
-    espEnabled = not espEnabled
-    updateESP()
-    if espEnabled then
-        toggleESP.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-       ESP.Text = "ESP: ON"
-    else
-        toggle.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-        toggleESP.Text = "ESP: OFF"
-    end
-end)
-
-toggleAimbot.MButton1Click:Connect(function()
-    aimbotEnabled = notbotEnabled
-    if aimbotEnabled then
-        toggleAot.BackgroundColor3 = Color3.fromRGB(0,200, 0)
-        toggleAimbot.Text = "AIM: ON"
-    else
-        toggleAimbot.BackColor3 = Color3.fromRGB(200, 0,0)
-        toggleAimbot.Text = "AIM:"
-    end
-end)
-
-for _, player in pairs(Players:GetPlayers()) do
-    createESP(player)
-end
-
-PlayerslayerAdded:Connect(function(player)
-    player.CharacterAdded:(function()
-        createESP(player)
-    end)
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-    removeESP(player)
-end)
-
-RunService.RenderStepped:Connect()
-    if aimbotEnabled and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then
-        aimbot()
-    end
-end)
+local infoLabel = Instance.new("TextLabel")
+infoLabel.Size = UDim2.new(1, 0, 0, 30)
+infoLabel.Position = UDim2.new(0, 0
