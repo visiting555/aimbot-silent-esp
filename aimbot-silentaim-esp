@@ -1,111 +1,202 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-local ESPEnabled = true
-local AimLockEnabled = true
-local AimLockKey = Enum.KeyCode.Q
 
-local function CreateESP(player)
-    local highlight = Instance.new("Highlight")
-    highlight.Adornee = player.Character
-    highlight.FillColor = Color3.fromRGB(255, 0, 0)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.FillTransparency = 0.5
-    highlight.OutlineTransparency = 0
-    highlight.Parent = player.Character
-    
-    local billboard = Instance.new("BillboardGui")
-    billboard.Adornee = player.Character
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 3, 0)
-    billboard.Parent = player.Character
-    
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, 0, 1, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = player.Name
-    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.TextScaled = true
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.Parent = billboard
-    
-    player.CharacterAdded:Connect(function()
-        highlight.Adornee = player.Character
-        billboard.Adornee = player.Character
-    end)
+local aimbotEnabled = false
+local espEnabled = true
+local aimbotKey = Enum.KeyCode.LeftAlt
+
+local playerESP = {}
+
+local function createESP(player)
+	if player == LocalPlayer then return end
+	local char = player.Character
+	if not char then return end
+	
+	local highlight = Instance.new("Highlight")
+	highlight.Adornee = char
+	highlight.FillColor = Color3.fromRGB(255, 50, 50)
+	highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+	highlight.FillTransparency = 0.4
+	highlight.OutlineTransparency = 0
+	highlight.Enabled = espEnabled
+	highlight.Parent = char
+	
+	local billboard = Instance.new("BillboardGui")
+	billboard.Adornee = char
+	billboard.Size = UDim2.new(0, 200, 0, 50)
+	billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+	billboard.AlwaysOnTop = true
+	billboard.Enabled = espEnabled
+	billboard.Parent = char
+	
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.Text = player.Name
+	label.TextColor3 = Color3.fromRGB(255, 255 255)
+	label.TextScaled = true
+	label.Font = Enum.Font.GothamBold
+	label.Parent = billboard
+	
+	playerESP[player] = {highlight = highlight, billboard = billboard}
+	
+	char:WaitForChild("HumanoidRootPart").AncestryChanged:Connect(function()
+		if not char.Parent then
+			removeESP(player)
+		end
+	end)
 end
 
-local function GetClosestPlayer()
-    local closestDistance = math.huge
-    local closestPlayer = nil
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local character = player.Character
-            local humanoidRootPart = character.HumanoidRootPart
-            local screenPosition, onScreen = Camera:WorldToScreenPoint(humanoidRootPart.Position)
-            
-            if onScreen then
-                local mousePosition = Vector2.new(UserInputService:GetMouseLocation().X, UserInputService:GetMouseLocation().Y)
-                local distance = (mousePosition - Vector2.new(screenPosition.X, screenPosition.Y)).Magnitude
-                
-                if distance < closestDistance then
-                    closestDistance = distance
-                    closestPlayer = player
-                end
-            end
-        end
-    end
-    
-    return closestPlayer
+local function removeESP(player)
+	if playerESP[player] then
+		if playerESP[].highlight then
+			playerESP[player].highlightDestroy()
+		end
+		if playerESP[player].bill then
+			playerESP[player].billboard:Destroy		end
+		playerESP[player] = nil
+
 end
+
+local function updateESP()
+	for player, esp in pairs(playerESP) do
+		if esp.highlight then
+	esp.highlight.Enabled = espEnabled
+		end
+		if.billboard then
+			esp.billboard.Enabled espEnabled
+		end
+	end
+end
+
+local function getosestTarget()
+	local closest = nil
+	local closestDist = mathuge
+	local mousePos = Vector2.new(UserInputService:MouseLocation().X, UserInputService:GetMouseLocation().Y)
+	
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			local char = player.Character
+			local root = char.HumanoidRootPart
+			local screenPos, onScreen = Camera:WorldToScreenPoint(root.Position)
+			
+			if onScreen then
+				local dist = (mousePos - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+				if dist < closestDist then
+					closestDist = dist
+					closest = player
+				end
+			end
+		end
+	end
+	
+	return closestend
+
+local function aimbot()
+	local target = getClosest()
+	if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+		local root = target.Character.HumanoidRootPart		local lookAt = CFrame.new(Camera.CFrame.Position, root.Position)
+		Camera.CFrame = lookAt
+	end
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "MenuGUI"
+gui.ResetOnSpawn = false
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 250, 0, 160)
+mainFrame.Position = UDim2.new(0.5, -125, 0.5, -80)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BackgroundTransparency = 0.2
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = gui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "EGITSEL PANEL"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = mainFrame
+
+local toggleESP = Instance.new("TextButton")
+toggleESP.Size = UDim2.new(0, 100, 0, 40)
+toggleESP.Position = UDim2.new(0.5, -110, 0.5 -20)
+toggleESP.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+toggleESP.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleESP.Text = "ESP: ON"
+toggleESP.Font = Enum.Font.GothamBold
+toggleESP.TextScaled = true
+toggleESP.Parent = mainFrame
+
+local toggleAimbot = Instance.new("TextButton")
+toggleAimbot.Size = UDim2.new(0, 100, 0, 40)
+toggleAimbot.Position = UDim2.new(0.5, 10, 0.5, -20)
+toggleAimbot.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+toggleAimbot.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleAimbot.Text = "AIM: OFF"
+toggleAimbot.Font = Enum.Font.GothamBold
+toggleAimbot.TextScaled = true
+toggleAimbot.P = mainFrame
+
+local infoLabel = Instance.new("TextLabelinfoLabel.Size = UDim2.new(1, 0, 0, 30)
+infoLabel.Position = UDim2.new(0, 0, 1, -30)
+infoLabel.BackgroundTransparency = 1
+info.Text = "AIM KEY: LEFT ALT"
+infoLabel.Text3 = Color3.fromRGB(200, 200, 200)
+infoLabel.TextScaled = true
+infoLabel.Font = Enum.Font.Gotham
+infoLabel.Parent = mainFrame
+
+toggleESPouseButton1Click:Connect(function()
+	espEnabled = notEnabled
+	updateESP()
+	if espEnabled then
+		tESP.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+		toggleESP.Text = "ESP: ON"
+	else
+		toggleESP.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+		toggleESP.Text = "ESP: OFF"
+	end
+end)
+
+toggleAimbot.MouseButton1Click:Connect(function()
+	aimbotEnabled = not aimbotEnabled
+	if aimbotEnabled then
+		toggleAimbot.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+		toggleAimbot.Text = "AIM: ON"
+	else
+		toggleAimbot.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+		toggleAimbot.Text = "AIM: OFF"
+	end
+end)
 
 for _, player in pairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        player.CharacterAdded:Connect(function()
-            CreateESP(player)
-        end)
-        
-        if player.Character then
-            CreateESP(player)
-        end
-    end
+	createESP(player)
 end
 
 Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        CreateESP(player)
-    end)
+	player.CharacterAdded:Connect(function()
+		createESP(player)
+	end)
 end)
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.F1 then
-        ESPEnabled = not ESPEnabled
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                local highlight = player.Character:FindFirstChildWhichIsA("Highlight")
-                local billboard = player.Character:FindFirstChildWhichIsA("BillboardGui")
-                if highlight then highlight.Enabled = ESPEnabled end
-                if billboard then billboard.Enabled = ESPEnabled end
-            end
-        end
-    end
-    
-    if input.KeyCode == Enum.KeyCode.F2 then
-        AimLockEnabled = not AimLockEnabled
-    end
+Players.PlayerRemoving:Connect(function(player)
+	removeESP(player)
 end)
 
 RunService.RenderStepped:Connect(function()
-    if AimLockEnabled and UserInputService:IsKeyDown(AimLockKey) then
-        local targetPlayer = GetClosestPlayer()
-        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local targetPart = targetPlayer.Character.HumanoidRootPart
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
-        end
-    end
+	if aimbotEnabled and UserInputService:IsKeyDown(aimbotKey) then
+		aimbot()
+	end
 end)
