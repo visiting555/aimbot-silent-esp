@@ -7,22 +7,21 @@ local Camera = workspace.CurrentCamera
 
 local aimbotEnabled = false
 local espEnabled = false
-local godmodeEnabled = false
 
--- ESKİ MENÜ TEMİZLİĞİ
+-- ESKİ PANELİ TEMİZLE
 local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-if playerGui:FindFirstChild("SadePanel") then
-    playerGui["SadePanel"]:Destroy()
+if playerGui:FindFirstChild("CalisanPanel") then
+    playerGui["CalisanPanel"]:Destroy()
 end
 
 -- GUI OLUŞTURMA
 local gui = Instance.new("ScreenGui")
-gui.Name = "SadePanel"
+gui.Name = "CalisanPanel"
 gui.ResetOnSpawn = false
 gui.Parent = playerGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 210, 0, 230)
+mainFrame.Size = UDim2.new(0, 200, 0, 150)
 mainFrame.Position = UDim2.new(0, 50, 0, 50)
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 mainFrame.BorderSizePixel = 2
@@ -34,25 +33,25 @@ mainFrame.Parent = gui
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 35)
 title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-title.Text = "TEST PANEL"
+title.Text = "AIM & ESP PANEL"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 16
 title.Parent = mainFrame
 
--- --- DİNAMİK ESP ---
+-- --- ESP ---
 local function updateESP()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local char = player.Character
-            local highlight = char:FindFirstChild("Simple_ESP")
+            local highlight = char:FindFirstChild("Original_ESP")
 
             if espEnabled then
                 local hum = char:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then
                     if not highlight then
                         highlight = Instance.new("Highlight")
-                        highlight.Name = "Simple_ESP"
+                        highlight.Name = "Original_ESP"
                         highlight.Adornee = char
                         highlight.FillColor = Color3.fromRGB(255, 50, 50)
                         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -70,7 +69,7 @@ local function updateESP()
     end
 end
 
--- --- DOĞRUDAN AIMLOCK (EN YAKIN HEDEF) ---
+-- --- AIMLOCK (ÇALIŞAN İLK MANTIK) ---
 local function getClosestPlayer()
     local mousePos = UserInputService:GetMouseLocation()
     local closestPart = nil
@@ -80,17 +79,16 @@ local function getClosestPlayer()
         if player ~= LocalPlayer and player.Character then
             local char = player.Character
             local hum = char:FindFirstChildOfClass("Humanoid")
-            -- Kilitlenecek parça: Head (Kafa) yoksa HumanoidRootPart (Gövde)
-            local targetPart = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+            local head = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
 
-            if hum and hum.Health > 0 and targetPart then
-                local screenPos, onScreen = Camera:WorldToScreenPoint(targetPart.Position)
+            if hum and hum.Health > 0 and head then
+                local screenPos, onScreen = Camera:WorldToScreenPoint(head.Position)
 
                 if onScreen then
                     local distance = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
                     if distance < shortestDistance then
                         shortestDistance = distance
-                        closestPart = targetPart
+                        closestPart = head
                     end
                 end
             end
@@ -102,8 +100,8 @@ end
 
 -- BUTONLAR
 local espBtn = Instance.new("TextButton")
-espBtn.Size = UDim2.new(0, 170, 0, 40)
-espBtn.Position = UDim2.new(0, 20, 0, 50)
+espBtn.Size = UDim2.new(0, 160, 0, 40)
+espBtn.Position = UDim2.new(0, 20, 0, 45)
 espBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 espBtn.Text = "ESP: KAPALI"
 espBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -118,8 +116,8 @@ espBtn.MouseButton1Click:Connect(function()
 end)
 
 local aimBtn = Instance.new("TextButton")
-aimBtn.Size = UDim2.new(0, 170, 0, 40)
-aimBtn.Position = UDim2.new(0, 20, 0, 100)
+aimBtn.Size = UDim2.new(0, 160, 0, 40)
+aimBtn.Position = UDim2.new(0, 20, 0, 95)
 aimBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 aimBtn.Text = "AIMLOCK: KAPALI"
 aimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -133,40 +131,14 @@ aimBtn.MouseButton1Click:Connect(function()
     aimBtn.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
 end)
 
-local godBtn = Instance.new("TextButton")
-godBtn.Size = UDim2.new(0, 170, 0, 40)
-godBtn.Position = UDim2.new(0, 20, 0, 150)
-godBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-godBtn.Text = "GODMODE: KAPALI"
-godBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-godBtn.Font = Enum.Font.SourceSansBold
-godBtn.TextSize = 15
-godBtn.Parent = mainFrame
-
-godBtn.MouseButton1Click:Connect(function()
-    godmodeEnabled = not godmodeEnabled
-    godBtn.Text = godmodeEnabled and "GODMODE: AÇIK" or "GODMODE: KAPALI"
-    godBtn.BackgroundColor3 = godmodeEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-end)
-
--- ANA DÖNGÜ (RenderStepped)
+-- ANA DÖNGÜ
 RunService.RenderStepped:Connect(function()
-    -- ESP
     updateESP()
 
-    -- AIMLOCK: Doğrudan CFrame Kilitlemesi
     if aimbotEnabled then
         local targetPart = getClosestPlayer()
         if targetPart then
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
-        end
-    end
-
-    -- GODMODE: İstemci Tarafı Can Tazeleme
-    if godmodeEnabled and LocalPlayer.Character then
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.Health = hum.MaxHealth
         end
     end
 end)
