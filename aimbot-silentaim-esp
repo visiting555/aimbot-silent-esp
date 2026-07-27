@@ -11,22 +11,22 @@ local godmodeEnabled = false
 
 -- ESKİ MENÜ TEMİZLİĞİ
 local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-if playerGui:FindFirstChild("GelistirilmisMenu") then
-    playerGui["GelistirilmisMenu"]:Destroy()
+if playerGui:FindFirstChild("SadePanel") then
+    playerGui["SadePanel"]:Destroy()
 end
 
 -- GUI OLUŞTURMA
 local gui = Instance.new("ScreenGui")
-gui.Name = "GelistirilmisMenu"
+gui.Name = "SadePanel"
 gui.ResetOnSpawn = false
 gui.Parent = playerGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 210, 0, 240)
+mainFrame.Size = UDim2.new(0, 210, 0, 230)
 mainFrame.Position = UDim2.new(0, 50, 0, 50)
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 mainFrame.BorderSizePixel = 2
-mainFrame.BorderColor3 = Color3.fromRGB(0, 170, 255)
+mainFrame.BorderColor3 = Color3.fromRGB(0, 255, 150)
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = gui
@@ -34,27 +34,27 @@ mainFrame.Parent = gui
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 35)
 title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-title.Text = "GELİŞTİRİLMİŞ PANEL"
+title.Text = "TEST PANEL"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 16
 title.Parent = mainFrame
 
--- --- DİNAMİK ESP SİSTEMİ ---
+-- --- DİNAMİK ESP ---
 local function updateESP()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local char = player.Character
-            local highlight = char:FindFirstChild("ESP_Highlight")
+            local highlight = char:FindFirstChild("Simple_ESP")
 
             if espEnabled then
                 local hum = char:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 then
                     if not highlight then
                         highlight = Instance.new("Highlight")
-                        highlight.Name = "ESP_Highlight"
+                        highlight.Name = "Simple_ESP"
                         highlight.Adornee = char
-                        highlight.FillColor = Color3.fromRGB(255, 30, 30)
+                        highlight.FillColor = Color3.fromRGB(255, 50, 50)
                         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
                         highlight.FillTransparency = 0.5
                         highlight.Parent = char
@@ -70,89 +70,34 @@ local function updateESP()
     end
 end
 
--- --- Gelişmiş Aimlock (Tehdit Algılama + Duvar Kontrolü) ---
-local function isVisible(targetPart)
-    local origin = Camera.CFrame.Position
-    local direction = (targetPart.Position - origin)
-    
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = RaycastFilterType.Exclude
-    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
-    
-    local result = workspace:Raycast(origin, direction, raycastParams)
-    
-    if result and result.Instance:IsDescendantOf(targetPart.Parent) then
-        return true
-    end
-    return false
-end
-
-local function getBestTarget()
+-- --- DOĞRUDAN AIMLOCK (EN YAKIN HEDEF) ---
+local function getClosestPlayer()
     local mousePos = UserInputService:GetMouseLocation()
-    local myChar = LocalPlayer.Character
-    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
-
-    local myPos = myChar.HumanoidRootPart.Position
-    local threatTarget = nil
-    local maxThreatAngle = 0.65 -- Sana doğru yaklaşık 50 derece açıyla bakanlar
-    
-    local closestTarget = nil
-    local closestDist = math.huge
+    local closestPart = nil
+    local shortestDistance = math.huge
 
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local char = player.Character
             local hum = char:FindFirstChildOfClass("Humanoid")
-            local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+            -- Kilitlenecek parça: Head (Kafa) yoksa HumanoidRootPart (Gövde)
+            local targetPart = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
 
-            if hum and hum.Health > 0 and root then
-                -- Görüş Hattı Kontrolü (Duvar arkasındakilere boş kilitlenmesin)
-                if isVisible(root) then
-                    local screenPos, onScreen = Camera:WorldToScreenPoint(root.Position)
+            if hum and hum.Health > 0 and targetPart then
+                local screenPos, onScreen = Camera:WorldToScreenPoint(targetPart.Position)
 
-                    if onScreen then
-                        -- 1. Tehlike Mantığı: Yüzü sana dönük mü?
-                        local lookVec = root.CFrame.LookVector
-                        local dirToMe = (myPos - root.Position).Unit
-                        local dot = lookVec:Dot(dirToMe)
-
-                        if dot > maxThreatAngle then
-                            maxThreatAngle = dot
-                            threatTarget = root
-                        end
-
-                        -- 2. İmlece En Yakınlık
-                        local dist = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
-                        if dist < closestDist then
-                            closestDist = dist
-                            closestTarget = root
-                        end
+                if onScreen then
+                    local distance = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        closestPart = targetPart
                     end
                 end
             end
         end
     end
 
-    -- Bize bakan tehdit varsa İLK ONA kilitlenir, yoksa imlece en yakın olana
-    return threatTarget or closestTarget
-end
-
--- --- FE Bypassed Godmode (TouchInterest & Network) ---
-local function applyGodmode()
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    -- Temas/Hasar Trigger'larını İstemci Tarafında Etkisizleştirme
-    for _, child in pairs(char:GetDescendants()) do
-        if child:IsA("TouchTransmitter") or child.Name == "TouchInterest" then
-            child:Destroy()
-        end
-    end
-
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.BreakJointsOnDeath = false
-    end
+    return closestPart
 end
 
 -- BUTONLAR
@@ -202,28 +147,26 @@ godBtn.MouseButton1Click:Connect(function()
     godmodeEnabled = not godmodeEnabled
     godBtn.Text = godmodeEnabled and "GODMODE: AÇIK" or "GODMODE: KAPALI"
     godBtn.BackgroundColor3 = godmodeEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-    
-    if godmodeEnabled then
-        applyGodmode()
-    end
 end)
 
--- ANA OYUN DÖNGÜSÜ (RenderStepped)
+-- ANA DÖNGÜ (RenderStepped)
 RunService.RenderStepped:Connect(function()
-    -- 1. ESP Güncelleme
+    -- ESP
     updateESP()
 
-    -- 2. Aimlock Takibi
+    -- AIMLOCK: Doğrudan CFrame Kilitlemesi
     if aimbotEnabled then
-        local target = getBestTarget()
-        if target then
-            -- Kamerayı Lerp (yumuşak geçiş) ile hedefe kilitler
-            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, target.Position), 0.4)
+        local targetPart = getClosestPlayer()
+        if targetPart then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
         end
     end
 
-    -- 3. Godmode Koruma
-    if godmodeEnabled then
-        applyGodmode()
+    -- GODMODE: İstemci Tarafı Can Tazeleme
+    if godmodeEnabled and LocalPlayer.Character then
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.Health = hum.MaxHealth
+        end
     end
 end)
