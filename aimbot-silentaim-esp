@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
@@ -9,6 +10,9 @@ local espEnabled = true
 local godmodeEnabled = false
 
 local playerESP = {}
+local playerGodmode = {}
+
+-- ESP Temizleme
 local function removeESP(player)
     if playerESP[player] then
         if playerESP[player].highlight then
@@ -17,42 +21,49 @@ local function removeESP(player)
         if playerESP[player].billboard then
             playerESP[player].billboard:Destroy()
         end
-        player = nil
+        playerESP[player] = nil
     end
 end
 
+-- ESP Oluşturma
 local function createESP(player)
     if player == LocalPlayer then return end
     local char = player.Character
     if not char then return end
-    
+
     local highlight = Instance.new("Highlight")
     highlight.Adornee = char
-    highlight.F3.fromRGB(255, 50, 50)
+    highlight.FillColor = Color3.fromRGB(255, 50, 50)
     highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
     highlight.FillTransparency = 0.4
     highlight.OutlineTransparency = 0
-    highlight.Enabled    highlight.Parent = char
-    
+    highlight.Enabled = espEnabled
+    highlight.Parent = char
+
     local billboard = Instance.new("BillboardGui")
     billboard.Adornee = char
     billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0,  0)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
     billboard.AlwaysOnTop = true
     billboard.Enabled = espEnabled
     billboard.Parent = char
-    
+
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = label.Text = player.Name
+    label.BackgroundTransparency = 1
+    label.Text = player.Name
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
     label.TextScaled = true
     label.Font = Enum.Font.GothamBold
     label.Parent = billboard
-    
-    playerESP[player] = {board = billboard}
+
+    playerESP[player] = {
+        highlight = highlight,
+        billboard = billboard
+    }
 end
 
+-- ESP Güncelleme
 local function updateESP()
     for player, esp in pairs(playerESP) do
         if esp.highlight then
@@ -60,22 +71,24 @@ local function updateESP()
         end
         if esp.billboard then
             esp.billboard.Enabled = espEnabled
- end
+        end
+    end
 end
 
+-- En Yakın Hedefi Bulma
 local function getClosestTarget()
     local closest = nil
     local closestDist = math.huge
     local mousePos = UserInputService:GetMouseLocation()
-    
+
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= Local.Character:FindFirstChild("HumanoidRootPart") then
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local char = player.Character
             local root = char.HumanoidRootPart
             local screenPos, onScreen = Camera:WorldToScreenPoint(root.Position)
-            
+
             if onScreen then
-                local dist = (Vector2.new, mousePos.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+                local dist = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
                 if dist < closestDist then
                     closestDist = dist
                     closest = player
@@ -83,19 +96,21 @@ local function getClosestTarget()
             end
         end
     end
-    
+
     return closest
 end
 
+-- Aimbot Fonksiyonu
 local function aimbot()
+    if not aimbotEnabled then return end
     local target = getClosestTarget()
     if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
         local root = target.Character.HumanoidRootPart
-        local lookAt = CFrame.new(Camera.CFrame.Position, root.Position)
-        Camera.CFrame = lookAt
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, root.Position)
     end
 end
 
+-- Godmode Fonksiyonları
 local function enableGodmode()
     local char = LocalPlayer.Character
     if not char then return end
@@ -104,9 +119,6 @@ local function enableGodmode()
         humanoid.MaxHealth = math.huge
         humanoid.Health = math.huge
         humanoid.BreakJointsOnDeath = false
-        humanoid.Parent = nil
-        wait()
-        humanoid.Parent = char
         playerGodmode[LocalPlayer] = humanoid
     end
 end
@@ -114,26 +126,16 @@ end
 local function disableGodmode()
     local char = LocalPlayer.Character
     if not char then return end
-    local humanoid = char:FindFirstChildOfClass    if humanoid then
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
         humanoid.MaxHealth = 100
         humanoid.Health = 100
         humanoid.BreakJointsOnDeath = true
     end
-    if playerGodmode[LocalPlayer] then
-        playerGodmode[LocalPlayer] = nil
-    end
+    playerGodmode[LocalPlayer] = nil
 end
 
-local function toggleGodmode()
-    godmodeEnabled = not godmodeEnabled
-    if godmodeEnabled then
-        enableGodmode()
-    else
-        disableGodmode()
-    end
-    return godmodeEnabled
-end
-
+-- GUI OLUŞTURMA
 local gui = Instance.new("ScreenGui")
 gui.Name = "MenuGUI"
 gui.ResetOnSpawn = false
@@ -141,52 +143,97 @@ gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 300, 0, 220)
-mainFrame.Position = UDim2.new(0.5, -150, 0110)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -110)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Draggable = true
-mainFrame.Parent = gu.new("TextLabel")
+mainFrame.Parent = gui
+
+local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
 title.Position = UDim2.new(0, 0, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "EGITSEL PANEL"
+title.Text = "EĞİTSEL PANEL"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.Parent = mainFrame
 
-local toggleESP = Instance.new("TextButton")
-toggleESP.Size = UDim2.new(0, 120, 0, 40)
-toggleESP.Position = UDim2.new(0.5, -130, 0.5, -30)
-toggleESP.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-toggleESP.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleESP.Text = "ESP: ON"
-toggleESP.Font = Enum.Font.GothamBold
-toggleESP.TextScaled = true
-toggleESP.Parent = mainFrame
+-- Buton: ESP
+local toggleESPBtn = Instance.new("TextButton")
+toggleESPBtn.Size = UDim2.new(0, 120, 0, 40)
+toggleESPBtn.Position = UDim2.new(0.5, -130, 0.4, -20)
+toggleESPBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+toggleESPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleESPBtn.Text = "ESP: ON"
+toggleESPBtn.Font = Enum.Font.GothamBold
+toggleESPBtn.TextScaled = true
+toggleESPBtn.Parent = mainFrame
 
-local toggleAimbot = Instance.new("TextButton")
-toggleAimbot.Size = UDim2.new(0, 120, 0, 40)
-toggleAimbot.Position = UDim2.new(0.5, 10, 0.5, -30)
-toggleAimbot.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-toggleAimbot.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleAimbot.Text = "AIM: OFF"
-toggleAimbot.Font = Enum.Font.GothamBold
-toggleAimbot.TextScaled = true
-toggleAimbot.Parent = mainFrame
+toggleESPBtn.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    toggleESPBtn.Text = espEnabled and "ESP: ON" or "ESP: OFF"
+    toggleESPBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
+    updateESP()
+end)
 
-local toggleGodmode = Instance.new("TextButton")
-toggleGodmode.Size = UDim2.new(0, 120, 0, 40)
-toggleGodmode.Position = UDim2.new(0.5, -60, 0.5, 20)
-toggleGodmode.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-toggleGodmode.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleGodmode.Text = "GOD: OFF"
-toggleGodmode.Font = Enum.Font.GothamBold
-toggleGodmode.TextScaled = true
-toggleGodmode.Parent = mainFrame
+-- Buton: Aimbot
+local toggleAimbotBtn = Instance.new("TextButton")
+toggleAimbotBtn.Size = UDim2.new(0, 120, 0, 40)
+toggleAimbotBtn.Position = UDim2.new(0.5, 10, 0.4, -20)
+toggleAimbotBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+toggleAimbotBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleAimbotBtn.Text = "AIM: OFF"
+toggleAimbotBtn.Font = Enum.Font.GothamBold
+toggleAimbotBtn.TextScaled = true
+toggleAimbotBtn.Parent = mainFrame
 
-local infoLabel = Instance.new("TextLabel")
-infoLabel.Size = UDim2.new(1, 0, 0, 30)
-infoLabel.Position = UDim2.new(0, 0
+toggleAimbotBtn.MouseButton1Click:Connect(function()
+    aimbotEnabled = not aimbotEnabled
+    toggleAimbotBtn.Text = aimbotEnabled and "AIM: ON" or "AIM: OFF"
+    toggleAimbotBtn.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
+end)
+
+-- Buton: Godmode
+local toggleGodmodeBtn = Instance.new("TextButton")
+toggleGodmodeBtn.Size = UDim2.new(0, 120, 0, 40)
+toggleGodmodeBtn.Position = UDim2.new(0.5, -60, 0.7, -10)
+toggleGodmodeBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+toggleGodmodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleGodmodeBtn.Text = "GOD: OFF"
+toggleGodmodeBtn.Font = Enum.Font.GothamBold
+toggleGodmodeBtn.TextScaled = true
+toggleGodmodeBtn.Parent = mainFrame
+
+toggleGodmodeBtn.MouseButton1Click:Connect(function()
+    godmodeEnabled = not godmodeEnabled
+    toggleGodmodeBtn.Text = godmodeEnabled and "GOD: ON" or "GOD: OFF"
+    toggleGodmodeBtn.BackgroundColor3 = godmodeEnabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
+    
+    if godmodeEnabled then
+        enableGodmode()
+    else
+        disableGodmode()
+    end
+end)
+
+-- EVENT Halka Dinleyicileri (ESP Güncellemeleri için)
+for _, p in pairs(Players:GetPlayers()) do
+    if p.Character then createESP(p) end
+    p.CharacterAdded:Connect(function() createESP(p) end)
+end
+
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function() createESP(p) end)
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    removeESP(p)
+end)
+
+-- Oyun Döngüsü (Aimbot Sürekli Çalışması İçin)
+RunService.RenderStepped:Connect(function()
+    aimbot()
+end)
